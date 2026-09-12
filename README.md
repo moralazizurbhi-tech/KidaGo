@@ -1,0 +1,2 @@
+# KidaGo
+Gestión de Inventario
