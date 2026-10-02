@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Exported from Figma "KidaGo", page "Diseño final". -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="251dp" android:height="150dp" android:viewportWidth="251" android:viewportHeight="150">
+    <path android:pathData="M126.344 0C139.968 0 152.731 3.68519 163.691 10.1123C166.591 11.1695 169.444 12.4719 172.223 14.0283L221.054 41.3701C249.007 57.0217 258.978 92.3698 243.327 120.322C227.675 148.275 192.327 158.247 164.375 142.596L159.671 139.961C149.656 145.026 138.333 147.882 126.344 147.882C113.945 147.882 102.261 144.829 91.9979 139.436L86.3573 142.596C58.4047 158.247 23.0558 148.275 7.40419 120.322C-8.24711 92.3697 1.72515 57.0216 29.6776 41.3701L78.5077 14.0283C82.7275 11.6655 87.1162 9.88721 91.5799 8.66601C101.943 3.13549 113.777 2.7284e-05 126.344 0Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="125.366" android:startY="15.2652" android:endX="125.366" android:endY="93.9766">
+                <item android:offset="0" android:color="#0DE3001B" />
+                <item android:offset="1" android:color="#40E3001B" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

@@ -7,8 +7,11 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.performClick
+import org.junit.Assert.assertTrue
 import com.afede.kidago.ui.theme.KidaGoTheme
+import androidx.compose.ui.unit.dp
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -69,5 +72,20 @@ class AppShellTest {
         gear().performClick()
         tab("Productos").assertIsDisplayed().performClick()
         rule.onNodeWithTag("screen-products").assertIsDisplayed()
+    }
+
+    @Test
+    fun headerShowsAfedeLogoAboveKidaGo() {
+        rule.onNodeWithContentDescription("afede").assertIsDisplayed()
+        val logo = rule.onNodeWithContentDescription("afede").getUnclippedBoundsInRoot()
+        val name = rule.onNodeWithText("KidaGo").getUnclippedBoundsInRoot()
+        assertTrue(logo.bottom <= name.top + 1.dp)
+    }
+
+    @Test
+    fun tabOrderIsProductosThenEscanear() { // Figma: Productos on the left
+        val left = tab("Productos").getUnclippedBoundsInRoot().left
+        val right = tab("Escanear").getUnclippedBoundsInRoot().left
+        assertTrue(left < right)
     }
 }
