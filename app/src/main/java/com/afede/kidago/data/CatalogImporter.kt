@@ -66,7 +66,7 @@ class CatalogImporter(private val commit: suspend (List<String>) -> Unit) {
     }
 
     companion object {
-        const val MAX_DIAGNOSTICS = 50
-        private const val BOM = "﻿"
+        const val MAX_DIAGNOSTICS = 10 // the strip panel grows to fit and the screen does not scroll, so keep it short
+        private const val BOM = "\uFEFF"
     }
 }
