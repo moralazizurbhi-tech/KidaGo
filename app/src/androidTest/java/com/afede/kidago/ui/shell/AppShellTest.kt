@@ -60,6 +60,31 @@ class AppShellTest {
     }
 
     @Test
+    fun escanearTabLeavesAjustesOpenedFromEscanear() {
+        gear().performClick()
+        tab("Escanear").performClick()
+        rule.onNodeWithTag("screen-scan").assertIsDisplayed()
+    }
+
+    @Test
+    fun escanearTabLeavesAjustesOpenedFromProductos() {
+        tab("Productos").performClick()
+        gear().performClick()
+        tab("Escanear").performClick()
+        rule.onNodeWithTag("screen-scan").assertIsDisplayed()
+    }
+
+    @Test
+    fun ajustesCanBeReopenedAfterLeavingItByATab() {
+        gear().performClick()
+        tab("Escanear").performClick()
+        gear().performClick()
+        rule.onNodeWithTag("screen-settings").assertIsDisplayed()
+        back()
+        rule.onNodeWithTag("screen-scan").assertIsDisplayed()
+    }
+
+    @Test
     fun repeatedGearTapsDoNotStackAjustes() {
         gear().performClick()
         gear().performClick()

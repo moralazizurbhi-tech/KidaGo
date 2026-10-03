@@ -108,6 +108,9 @@ fun AppShell(
             }
         }
         TabBar(route = route, productsBadge = productsBadge) { destination ->
+            // Ajustes is opened on top of a tab, outside the tabs' saved state. Close it first: otherwise the
+            // popUpTo below saves it under the start tab and restoreState brings it straight back (Escanear stuck).
+            if (route == Destination.Settings.route) navController.popBackStack(Destination.Settings.route, inclusive = true)
             navController.navigate(destination.route) {
                 popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                 launchSingleTop = true
