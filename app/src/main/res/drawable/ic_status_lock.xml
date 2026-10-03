@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Padlock, accent red: the No File Access icon (FEAT-001 UI, Iconography). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="16dp"
+    android:height="16dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M5,11 L19,11 L19,21 L5,21 Z"
+        android:strokeColor="#E3001B"
+        android:strokeWidth="2"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M8,11 L8,7.5 A4,4 0 0 1 16,7.5 L16,11"
+        android:strokeColor="#E3001B"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+</vector>
