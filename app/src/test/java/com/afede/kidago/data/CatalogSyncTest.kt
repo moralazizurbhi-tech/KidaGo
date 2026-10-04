@@ -21,6 +21,7 @@ class CatalogSyncTest {
 
     private var access = true
     private var settingsOpened = 0
+    private var storeHasCatalog = true // a catalog already applied, unless a test says otherwise
     private var committed = mutableListOf<List<String>>()
     private val finishedAt = Instant.parse("2026-10-03T10:00:00Z")
 
@@ -30,6 +31,7 @@ class CatalogSyncTest {
         importer = importer,
         cleanup = CatalogFileCleanup(),
         catalogFolder = { tmp.root },
+        hasCatalog = { storeHasCatalog },
         now = { finishedAt },
     )
 
@@ -38,8 +40,42 @@ class CatalogSyncTest {
     private val bad = "1234567890123\nnope\n"
 
     @Test
-    fun startsUpToDateWithNoCompletionTime() {
-        assertEquals(SyncState.UpToDate(null), coordinator().state.value)
+    fun startsWithNoCatalogUntilTheStoreIsChecked() {
+        assertEquals(SyncState.NoCatalog, coordinator().state.value)
+    }
+
+    @Test
+    fun withAnAppliedCatalogRestsUpToDateWithNoCompletionTime() = runTest {
+        val c = coordinator()
+        c.onDetectionOpportunity()
+        assertEquals(SyncState.UpToDate(null), c.state.value)
+    }
+
+    @Test
+    fun noCatalogHoldsUntilAnImportSucceeds() = runTest {
+        storeHasCatalog = false
+        val c = coordinator()
+        c.onDetectionOpportunity()
+        assertEquals(SyncState.NoCatalog, c.state.value)
+        catalog("product-catalog-2026-03-01.txt", good)
+        c.onDetectionOpportunity()
+        assertEquals(SyncState.UpToDate(finishedAt), c.state.value)
+    }
+
+    @Test
+    fun errorAndNoFileAccessTakePrecedenceOverNoCatalog() = runTest {
+        storeHasCatalog = false
+        catalog("product-catalog-2026-03-01.txt", bad)
+        val c = coordinator()
+        c.onDetectionOpportunity()
+        assertTrue(c.state.value is SyncState.Error)
+        access = false
+        c.onDetectionOpportunity()
+        assertEquals(SyncState.NoFileAccess, c.state.value)
+        File(tmp.root, "product-catalog-2026-03-01.txt").delete()
+        access = true
+        c.onDetectionOpportunity()
+        assertTrue(c.state.value is SyncState.Error) // still shown over No Catalog
     }
 
     @Test
@@ -71,6 +107,18 @@ class CatalogSyncTest {
         val state = c.state.value as SyncState.Error
         assertEquals(2, state.diagnostics.single().lineNumber)
         assertTrue(file.exists())
+        assertTrue(committed.isEmpty())
+    }
+
+    @Test
+    fun emptyFileGoesToErrorKeepsTheFileAndNeverCommits() = runTest {
+        val file = catalog("product-catalog-2026-03-01.txt", "")
+        val older = catalog("product-catalog-2026-01-01.txt", good)
+        val c = coordinator()
+        c.onDetectionOpportunity()
+        val state = c.state.value as SyncState.Error
+        assertTrue(state.diagnostics.single().reason.contains("no contiene registros"))
+        assertTrue(file.exists() && older.exists())
         assertTrue(committed.isEmpty())
     }
 
@@ -168,7 +216,7 @@ class CatalogSyncTest {
         val facade = CatalogQueryFacade(state) { consulted++; it == "1234567890123" }
         assertEquals(LookupResult.Unavailable, facade.lookup("1234567890123"))
         assertEquals(0, consulted)
-        for (s in listOf(SyncState.UpToDate(null), SyncState.Error(emptyList(), 1), SyncState.NoFileAccess)) {
+        for (s in listOf(SyncState.UpToDate(null), SyncState.NoCatalog, SyncState.Error(emptyList(), 1), SyncState.NoFileAccess)) {
             state.value = s
             assertEquals(LookupResult.Found, facade.lookup("1234567890123"))
             assertEquals(LookupResult.NotFound, facade.lookup("0000000000000"))

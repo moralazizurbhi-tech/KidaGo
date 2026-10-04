@@ -68,8 +68,8 @@ class CrossScreenIntegrationTest {
                 AppShell(
                     productsBadge = productos?.total ?: 0,
                     headerContent = { CatalogStatusStrip(syncState, {}) },
-                    scanScreen = { EscanearScreen(capture, typed, escanear::onTyped, escanear::onSubmit, escanear::onQuantitySubmit, syncing = syncState is SyncState.Syncing) },
-                    productsScreen = { ProductosScreen(productos, products.confirmation, products.removal::onLongPress) },
+                    scanScreen = { EscanearScreen(capture, typed, escanear::onTyped, escanear::onSubmit, escanear::onQuantitySubmit, syncing = syncState is SyncState.Syncing, onFinish = escanear::onFinish) },
+                    productsScreen = { ProductosScreen(productos, products.confirmation, products.removal::onLongPress, removalState = products.removal.state.collectAsState().value) },
                 )
             }
         }

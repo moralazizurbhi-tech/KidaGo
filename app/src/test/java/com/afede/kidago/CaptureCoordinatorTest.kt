@@ -141,6 +141,47 @@ class CaptureCoordinatorTest {
     }
 
     @Test
+    fun finishScanFromAnyOutcomeReturnsToIdleWithoutTouchingTheList() = runTest {
+        list.value = listOf(entry("A", 3))
+        val c = coordinator()
+        c.onCapture(code("Z")); runCurrent()
+        c.finishScan(); runCurrent()
+        assertEquals(CaptureState.Idle, c.state.value)
+        c.onCapture(ScanResult.Failure); runCurrent()
+        c.finishScan("5"); runCurrent() // Cantidad applies on Found only
+        assertEquals(CaptureState.Idle, c.state.value)
+        c.onCapture(code("A")); runCurrent()
+        c.finishScan(); runCurrent() // nothing typed: the +1 stays
+        assertEquals(CaptureState.Idle, c.state.value)
+        assertEquals(listOf(4), list.value.map { it.quantity })
+    }
+
+    @Test
+    fun finishScanAppliesAPendingCantidadFirst() = runTest {
+        list.value = listOf(entry("A", 3))
+        val c = coordinator()
+        c.onCapture(code("A")); runCurrent()
+        c.finishScan("5"); runCurrent()
+        assertEquals(8, qty("A"))
+        assertEquals(CaptureState.Idle, c.state.value)
+    }
+
+    @Test
+    fun finishScanIgnoresAnInvalidCantidadAndDoesNothingOutsideAnOutcome() = runTest {
+        list.value = listOf(entry("A", 3))
+        val c = coordinator()
+        c.finishScan("5"); runCurrent() // Idle: no-op
+        c.onTyping(true)
+        c.finishScan("5"); runCurrent()
+        assertEquals(CaptureState.Typing, c.state.value)
+        c.onTyping(false)
+        c.onCapture(code("A")); runCurrent()
+        c.finishScan("0"); runCurrent()
+        assertEquals(4, qty("A"))
+        assertEquals(CaptureState.Idle, c.state.value)
+    }
+
+    @Test
     fun cantidadAddsToTheQuantityBeforeThisScanAndResubmitReplaces() = runTest {
         list.value = listOf(entry("A", 3))
         val c = coordinator()

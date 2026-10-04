@@ -50,6 +50,7 @@ class SettingsEffectTest {
             importer = CatalogImporter { catalog.replaceAll(it) },
             cleanup = CatalogFileCleanup(),
             catalogFolder = { File(settings.settings.value.catalogFolder) }, // as in AppContainer
+            hasCatalog = catalog::hasCatalog,
         )
         File(second, "product-catalog-2026-10-04.txt").writeText("1111111111111\n")
 

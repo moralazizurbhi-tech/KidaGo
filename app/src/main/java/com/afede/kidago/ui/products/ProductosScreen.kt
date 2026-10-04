@@ -1,5 +1,7 @@
 package com.afede.kidago.ui.products
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +20,12 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.compositeOver
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -46,11 +54,13 @@ fun ProductosScreen(
     confirmation: ConfirmationController,
     onRowLongPress: (code: String) -> Unit,
     modifier: Modifier = Modifier,
+    /** The removal in progress: its row stays highlighted while the prompt is open (C13). */
+    removalState: RemovalState = RemovalState.List,
 ) {
     Column(modifier.fillMaxSize().testTag("screen-products").padding(horizontal = 20.dp)) {
         if (state == null) return@Column // not loaded yet: show nothing rather than a wrong empty state
         Header(state.total)
-        if (state.isEmpty) EmptyState(Modifier.weight(1f)) else EntryList(state.entries, onRowLongPress)
+        if (state.isEmpty) EmptyState(Modifier.weight(1f)) else EntryList(state.entries, (removalState as? RemovalState.ConfirmingRemoval)?.code, onRowLongPress)
     }
     ConfirmationHost(confirmation)
 }
@@ -72,21 +82,39 @@ private fun Header(total: Int) {
 }
 
 @Composable
-private fun EntryList(entries: List<ListEntry>, onRowLongPress: (String) -> Unit) {
+private fun EntryList(entries: List<ListEntry>, confirmingCode: String?, onRowLongPress: (String) -> Unit) {
     Column(Modifier.fillMaxWidth().background(KidaGoColors.Surface, KidaGoShapes.Card).padding(vertical = KidaGoSpacing.Gap)) {
         LazyColumn(Modifier.padding(horizontal = KidaGoSpacing.Outer).testTag("productos-list")) {
-            items(entries, key = { it.code }) { EntryRow(it, onRowLongPress) }
+            items(entries, key = { it.code }) { EntryRow(it, it.code == confirmingCode, onRowLongPress) }
         }
     }
 }
 
 @Composable
-private fun EntryRow(entry: ListEntry, onLongPress: (String) -> Unit) {
+private fun EntryRow(entry: ListEntry, confirming: Boolean, onLongPress: (String) -> Unit) {
     // Long-press is the only gesture: no ripple, no visible control or hint, and a plain tap does nothing (C3, C4).
     // The semantics action lets TalkBack users reach it without anything appearing on screen.
+    // Pressed feedback (C13): a very faint tint once the finger has been held HOLD_MS; a quick tap or a scroll never shows it,
+    // and it stays while this row's removal prompt is open.
+    var held by remember { mutableStateOf(false) }
+    val tint by animateColorAsState(
+        if (held || confirming) KidaGoColors.Accent.copy(alpha = 0.06f).compositeOver(KidaGoColors.Surface) else KidaGoColors.Surface,
+        tween(120), label = "row-tint",
+    )
     Column(
         Modifier.testTag("productos-row-${entry.code}")
-            .pointerInput(entry.code) { detectTapGestures(onLongPress = { onLongPress(entry.code) }) }
+            .background(tint)
+            .pointerInput(entry.code) {
+                detectTapGestures(
+                    onPress = {
+                        if (withTimeoutOrNull(HOLD_MS) { tryAwaitRelease() } == null) { // still down after the hold
+                            held = true
+                            try { tryAwaitRelease() } finally { held = false }
+                        }
+                    },
+                    onLongPress = { onLongPress(entry.code) },
+                )
+            }
             .semantics { onLongClick(label = "Eliminar producto") { onLongPress(entry.code); true } },
     ) {
         Row(Modifier.fillMaxWidth().height(50.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
@@ -96,6 +124,8 @@ private fun EntryRow(entry: ListEntry, onLongPress: (String) -> Unit) {
         HorizontalDivider(color = KidaGoColors.Border)
     }
 }
+
+private const val HOLD_MS = 150L // the platform's tap timeout
 
 @Composable
 private fun EmptyState(modifier: Modifier) {

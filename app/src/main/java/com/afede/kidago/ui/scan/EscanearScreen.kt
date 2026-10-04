@@ -13,6 +13,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -54,12 +55,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -81,7 +84,7 @@ import com.afede.kidago.ui.theme.KidaGoSpacing
 import com.afede.kidago.ui.theme.KidaGoTextField
 import com.afede.kidago.ui.theme.Manrope
 
-/** Libre Barcode 128 (SIL OFL): the hero barcode in the Figma design is this font set in "ainhoa". */
+/** Libre Barcode 128 (SIL OFL): the hero barcode in the Figma design is this font set in "ainhoa", black bars only (the Figma wavy line is omitted by decision). */
 private val BarcodeFont = FontFamily(Font(R.font.libre_barcode_128))
 private const val HERO_TEXT = "ainhoa"
 
@@ -109,6 +112,8 @@ fun EscanearScreen(
     modifier: Modifier = Modifier,
     /** A catalog sync is running: the surface is replaced by the updating message, so nothing can be typed or scanned. */
     syncing: Boolean = false,
+    /** "Listo" (C20): finish the scan; receives the "Cantidad" text typed but not submitted. */
+    onFinish: (pendingQuantity: String) -> Unit = {},
 ) {
     if (syncing) {
         SyncingSurface(modifier)
@@ -142,7 +147,7 @@ fun EscanearScreen(
                 contentKey = { it::class },
                 transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(220)) },
                 label = "capture-outcome",
-            ) { shown -> Outcome(shown, onQuantitySubmit) }
+            ) { shown -> Outcome(shown, onQuantitySubmit, onFinish) }
         }
     }
 }
@@ -173,14 +178,13 @@ private fun SyncingSurface(modifier: Modifier) {
 private fun HeroBarcode(dimmed: Boolean) {
     val density = LocalDensity.current
     Box(Modifier.height(HeroHeight).testTag("scan-hero"), contentAlignment = Alignment.Center) {
-        Image(painterResource(R.drawable.ic_scan_hero_wave), contentDescription = null, modifier = Modifier.offset(y = (-9).dp).size(323.dp, 49.dp))
         Text(
             HERO_TEXT,
             // Fixed size, like the artwork: it must not follow the user's font scale. The Error variant is the same artwork at half strength.
             style = TextStyle(fontFamily = BarcodeFont, fontSize = with(density) { HeroFontSize.toSp() }, letterSpacing = with(density) { HeroLetterSpacing.toSp() }, color = if (dimmed) KidaGoColors.Text.copy(alpha = 0.5f) else KidaGoColors.Text),
             maxLines = 1,
             softWrap = false,
-            // The font draws the bars inside the line box, which is taller than the bars; centre the bars on the wave.
+            // The font draws the bars inside the line box, which is taller than the bars; centre the bars in the hero box.
             modifier = Modifier.offset(y = (-4).dp),
         )
     }
@@ -268,25 +272,29 @@ private fun ClearButton(onClick: () -> Unit) {
 }
 
 @Composable
-private fun Outcome(state: CaptureState, onQuantitySubmit: (String) -> Unit) {
+private fun Outcome(state: CaptureState, onQuantitySubmit: (String) -> Unit, onFinish: (String) -> Unit) {
     when (state) {
         CaptureState.Searching -> Column(Modifier.padding(top = 55.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
             CircularProgressIndicator(Modifier.size(36.dp).testTag("scan-spinner"), color = KidaGoColors.Accent, trackColor = KidaGoColors.Accent.copy(alpha = 0.1f), strokeWidth = 4.dp)
             Text("Buscando producto...", style = MaterialTheme.typography.labelLarge, color = KidaGoColors.TextMuted)
         }
-        is CaptureState.Found -> Block(
+        is CaptureState.Found -> {
+            var draft by remember { mutableStateOf("") } // lives as long as this Found, so "Listo" can apply what was typed
+            Block(
             tag = "scan-outcome-found",
             badge = { CircleBadge(KidaGoColors.SuccessIcon) { Icon(Icons.Filled.Check, null, tint = KidaGoColors.Surface, modifier = Modifier.size(32.dp)) } },
             heading = "Producto encontrado",
             headingColor = KidaGoColors.SuccessText,
             subtext = { if (state.wasExisting) RescanWarning(state.quantity) else Subtext("Añadido a la lista") },
-            extra = { Cantidad(onQuantitySubmit) },
-        )
+            extra = { Cantidad(draft, { draft = it }, onQuantitySubmit); ListoButton { onFinish(draft) } },
+            )
+        }
         is CaptureState.NotFound -> Block(
             tag = "scan-outcome-notfound",
             badge = { CircleBadge(KidaGoColors.TextMuted) { Exclamation(KidaGoColors.Surface) } },
             heading = "Producto no encontrado",
             subtext = { Subtext("Comprueba el código o inténtalo de nuevo") },
+            extra = { ListoButton { onFinish("") } },
         )
         CaptureState.Error -> Block(
             tag = "scan-outcome-error",
@@ -294,6 +302,7 @@ private fun Outcome(state: CaptureState, onQuantitySubmit: (String) -> Unit) {
             badge = { TriangleBadge() },
             heading = "Error de lectura",
             subtext = { Subtext("No se ha podido leer el código Inténtalo de nuevo") },
+            extra = { ListoButton { onFinish("") } },
         )
         CaptureState.Idle, CaptureState.Typing -> Unit // the input alone carries these states
     }
@@ -372,20 +381,37 @@ private fun RescanWarning(total: Int) {
  * 1..99 empties back to the ghost with no message.
  */
 @Composable
-private fun Cantidad(onSubmit: (String) -> Unit) {
-    var draft by remember { mutableStateOf("") }
+private fun Cantidad(draft: String, onDraft: (String) -> Unit, onSubmit: (String) -> Unit) {
     Column(Modifier.widthIn(max = 200.dp).fillMaxWidth().padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Cantidad", style = MaterialTheme.typography.bodyLarge, color = KidaGoColors.Text)
         KidaGoTextField(
             value = draft,
-            onValueChange = { draft = it.filter { c -> c in '0'..'9' }.take(2) },
+            onValueChange = { onDraft(it.filter { c -> c in '0'..'9' }.take(2)) },
             modifier = Modifier.fillMaxWidth().height(64.dp).shadow(3.dp, KidaGoShapes.Pill).testTag("scan-cantidad"),
             placeholder = "1",
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = {
                 onSubmit(draft)
-                if (draft.toIntOrNull()?.let { it in 1..99 } != true) draft = ""
+                if (draft.toIntOrNull()?.let { it in 1..99 } != true) onDraft("")
             }),
         )
+    }
+}
+
+/** "Listo" (FEAT-002 UI): a 64 px pill in the input's shape, border and surface; pressed, it takes the accent at about 6%. */
+@Composable
+private fun ListoButton(onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val fill = if (pressed) KidaGoColors.Accent.copy(alpha = 0.06f).compositeOver(KidaGoColors.Surface) else KidaGoColors.Surface
+    Box(
+        Modifier.widthIn(max = 200.dp).fillMaxWidth().height(64.dp)
+            .background(fill, KidaGoShapes.Pill)
+            .border(1.dp, KidaGoColors.Border, KidaGoShapes.Pill)
+            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
+            .testTag("scan-listo"),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("Listo", style = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = KidaGoColors.Text))
     }
 }

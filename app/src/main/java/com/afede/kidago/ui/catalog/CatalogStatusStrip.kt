@@ -50,18 +50,19 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 // Strip copy (FEAT-001 UX/UI). Diagnostic wording is a provisional proposal: the UX leaves it an open asset decision.
+private const val NO_CATALOG_TEXT = "No hay datos en el catálogo. Conecte el dispositivo al ordenador y pulse Importar en el programa."
 private const val NO_ACCESS_TEXT = "Falta el permiso de archivos - toca para concederlo"
 private const val ERROR_TEXT = "Error al sincronizar - toca para ver detalles"
 private const val ERROR_WARNING = "Puede que tengas que volver a hacer Importar."
 
-private enum class StripIcon { Dot, Spinner, Error, Lock }
+private enum class StripIcon { Dot, Spinner, Error, Lock, NoCatalog }
 
 private val IconSize = 16.dp
 private val Time = DateTimeFormatter.ofPattern("HH:mm")
 private val DateAndTime = DateTimeFormatter.ofPattern("dd/MM HH:mm")
 
 /**
- * The catalog status strip for the shared header (FEAT-001 UX/UI): Up To Date, Syncing, Error (tap to expand the
+ * The catalog status strip for the shared header (FEAT-001 UX/UI): No Catalog (red, no action), Up To Date, Syncing, Error (tap to expand the
  * diagnostic panel in place) and No File Access (tap to reopen the settings screen). There is no manual sync action.
  */
 @Composable
@@ -82,6 +83,7 @@ fun CatalogStatusStrip(
                 }
             }
             is SyncState.Error -> ErrorStrip(state)
+            SyncState.NoCatalog -> StripRow(StripIcon.NoCatalog, NO_CATALOG_TEXT, "strip-nocatalog", textColor = KidaGoColors.Accent) // no tap, no expansion
             SyncState.NoFileAccess -> StripRow(StripIcon.Lock, NO_ACCESS_TEXT, "strip-noaccess", onClick = onNoFileAccessTap, role = Role.Button)
         }
     }
@@ -95,13 +97,13 @@ private fun upToDateText(completedAt: Instant?, zone: ZoneId): String {
 }
 
 @Composable
-private fun StripRow(icon: StripIcon, text: String, tag: String? = null, onClick: (() -> Unit)? = null, role: Role? = null) {
+private fun StripRow(icon: StripIcon, text: String, tag: String? = null, onClick: (() -> Unit)? = null, role: Role? = null, textColor: Color = KidaGoColors.Text) {
     var row = Modifier.fillMaxWidth()
     if (tag != null) row = row.testTag(tag)
     if (onClick != null) row = row.clickable(role = role, onClick = onClick)
     Row(row.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(KidaGoSpacing.Gap)) {
         StatusIcon(icon)
-        Text(text, style = MaterialTheme.typography.labelMedium, color = KidaGoColors.Text)
+        Text(text, style = MaterialTheme.typography.labelMedium, color = textColor)
     }
 }
 
@@ -126,6 +128,7 @@ private fun StatusIcon(icon: StripIcon) {
                 )
                 StripIcon.Error -> DrawableIcon(R.drawable.ic_status_error, "Error")
                 StripIcon.Lock -> DrawableIcon(R.drawable.ic_status_lock, "Sin permiso de archivos")
+                StripIcon.NoCatalog -> DrawableIcon(R.drawable.ic_status_no_catalog, "Sin catálogo")
             }
         }
     }

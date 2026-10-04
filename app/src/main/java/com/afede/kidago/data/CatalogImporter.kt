@@ -45,6 +45,9 @@ class CatalogImporter(private val commit: suspend (List<String>) -> Unit) {
                     onProgress((read.toFloat() / total).coerceAtMost(1f))
                 }
             }
+            if (lineNumber == 0) { // no records at all fails like a malformed file, never wipes the catalog (C23)
+                return@withContext ImportResult.Failure(listOf(RecordDiagnostic(0, file.name, "el archivo no contiene registros")), 1)
+            }
             if (failures > 0) return@withContext ImportResult.Failure(diagnostics, failures)
             commit(records)
             onProgress(1f)

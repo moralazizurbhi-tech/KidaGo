@@ -5,7 +5,11 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.down
+import androidx.compose.ui.test.up
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.longClick
@@ -44,7 +48,7 @@ class ProductosScreenTest {
             KidaGoTheme {
                 val vm = viewModel { ProductosListViewModel(store.entries, store.total, store::remove) }
                 val state by vm.state.collectAsState()
-                ProductosScreen(state, vm.confirmation, vm.removal::onLongPress)
+                ProductosScreen(state, vm.confirmation, vm.removal::onLongPress, removalState = vm.removal.state.collectAsState().value)
             }
         }
     }
@@ -179,5 +183,57 @@ class ProductosScreenTest {
         runBlocking { store.archiveAndClear(ArchiveReason.MANUAL) }
         val record = runBlocking { store.history() }.single()
         assertEquals(listOf("2222222222222"), runBlocking { store.historyEntries(record.id) }.map { it.code })
+    }
+
+    // ---- pressed-row feedback (C13): compared against an untouched row, so a modal scrim over both does not matter
+
+    private fun green(code: String) = rule.onNodeWithTag("productos-row-$code").captureToImage().toPixelMap()[2, 4].green
+    private fun assertTinted(code: String, other: String) = assertTrue(green(code) < green(other))
+    private fun assertNotTinted(code: String, other: String) = assertEquals(green(code), green(other), 0.001f)
+
+    @Test
+    fun heldRowShowsTheTintAndReleaseClearsIt() {
+        scan("1111111111111", "2222222222222")
+        rule.waitForIdle()
+        rule.mainClock.autoAdvance = false
+        rule.onNodeWithTag("productos-row-1111111111111").performTouchInput { down(center) }
+        rule.mainClock.advanceTimeBy(60)
+        assertNotTinted("1111111111111", "2222222222222") // not held long enough yet
+        rule.mainClock.advanceTimeBy(260) // past the 150 ms hold and the fade, before the long-press
+        assertTinted("1111111111111", "2222222222222")
+        assertNotTinted("2222222222222", "2222222222222")
+        rule.onNodeWithTag("productos-row-1111111111111").performTouchInput { up() }
+        rule.mainClock.advanceTimeBy(400)
+        assertNotTinted("1111111111111", "2222222222222")
+        rule.onNodeWithText("¿Eliminar este producto?").assertDoesNotExist()
+        rule.mainClock.autoAdvance = true
+    }
+
+    @Test
+    fun quickTapShowsNoTint() {
+        scan("1111111111111", "2222222222222")
+        rule.waitForIdle()
+        rule.mainClock.autoAdvance = false
+        rule.onNodeWithTag("productos-row-1111111111111").performTouchInput { down(center) }
+        rule.mainClock.advanceTimeBy(80)
+        rule.onNodeWithTag("productos-row-1111111111111").performTouchInput { up() }
+        rule.mainClock.advanceTimeBy(300)
+        assertNotTinted("1111111111111", "2222222222222")
+        rule.mainClock.autoAdvance = true
+    }
+
+    @Test
+    fun tintStaysWhileThePromptIsOpenAndIsGoneAfterDecline() {
+        scan("1111111111111", "2222222222222")
+        rule.waitForIdle()
+        longPress("1111111111111")
+        rule.mainClock.advanceTimeBy(300)
+        rule.onNodeWithText("¿Eliminar este producto?").assertIsDisplayed()
+        assertTinted("1111111111111", "2222222222222")
+        rule.onNodeWithText("Cancelar").performClick()
+        rule.waitForIdle()
+        rule.mainClock.advanceTimeBy(300)
+        assertNotTinted("1111111111111", "2222222222222")
+        assertEquals(2, runBlocking { db.todaysListDao().entries() }.size) // no data changed
     }
 }

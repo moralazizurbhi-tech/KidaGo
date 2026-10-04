@@ -104,11 +104,37 @@ class CaptureCoordinator(
     /** "Cantidad" submitted: a whole number 1..99 replaces the +1 of the latest Found scan; anything else is ignored. */
     fun onQuantitySubmit(text: String) {
         val scan = latest ?: return
-        val n = text.takeIf { it.isNotEmpty() && it.all { c -> c in '0'..'9' } }?.toIntOrNull()?.takeIf { it in 1..99 } ?: return
+        val n = validQuantity(text) ?: return
         scope.launch {
             if (applyQuantity(scan.code, scan.quantityBefore, n) && latest === scan) {
                 _state.value = CaptureState.Found(scan.code, scan.quantityBefore + n, scan.wasExisting)
             }
         }
     }
+
+    /**
+     * "Listo" (C20): from Found, Not Found or Error, back to Idle. On Found, a typed but unsubmitted [pendingQuantity]
+     * is applied first exactly as a submit would (C11); no other list write happens.
+     */
+    fun finishScan(pendingQuantity: String = "") {
+        val state = _state.value
+        if (state !is CaptureState.Found && state !is CaptureState.NotFound && state != CaptureState.Error) return
+        val scan = latest
+        val n = validQuantity(pendingQuantity)
+        if (state !is CaptureState.Found || scan == null || n == null) {
+            latest = null
+            _state.value = CaptureState.Idle
+            return
+        }
+        scope.launch {
+            applyQuantity(scan.code, scan.quantityBefore, n)
+            if (latest === scan) { // a newer capture during the write keeps its own state
+                latest = null
+                _state.value = CaptureState.Idle
+            }
+        }
+    }
+
+    private fun validQuantity(text: String) =
+        text.takeIf { it.isNotEmpty() && it.all { c -> c in '0'..'9' } }?.toIntOrNull()?.takeIf { it in 1..99 }
 }

@@ -19,6 +19,9 @@ sealed interface SyncState {
     data class Error(val diagnostics: List<RecordDiagnostic>, val failureCount: Int) : SyncState
 
     data object NoFileAccess : SyncState
+
+    /** No catalog has ever been successfully imported (C22). Syncing, Error and NoFileAccess take precedence. */
+    data object NoCatalog : SyncState
 }
 
 /**
@@ -31,19 +34,22 @@ class CatalogSyncCoordinator(
     private val importer: CatalogImporter,
     private val cleanup: CatalogFileCleanup,
     private val catalogFolder: () -> File,
+    private val hasCatalog: suspend () -> Boolean,
     private val now: () -> Instant = Instant::now,
 ) {
-    private val _state = MutableStateFlow<SyncState>(SyncState.UpToDate(null))
+    private val _state = MutableStateFlow<SyncState>(SyncState.NoCatalog)
     val state: StateFlow<SyncState> = _state
 
-    // The state the sync rests in when nothing is running and access is fine (UpToDate or Error). No File Access
-    // overlays it and, once access is back, hands it back unchanged (C21).
+    // The state the sync rests in when nothing is running and access is fine (NoCatalog, UpToDate or Error). No File
+    // Access overlays it and, once access is back, hands it back unchanged (C21).
     private var resting: SyncState = _state.value
+    private var completedAt: Instant? = null
     private val running = Mutex()
 
     suspend fun onDetectionOpportunity() {
         if (!running.tryLock()) return // C9: a sync is in progress, never start a second one
         try {
+            if (resting !is SyncState.Error) resting = baseState() // C22: from the store, so cleared app data shows No Catalog
             if (!guard.checkAtLaunchOrResume()) { // C17, C18, C20: no access, detection is skipped
                 _state.value = SyncState.NoFileAccess
                 return
@@ -57,13 +63,16 @@ class CatalogSyncCoordinator(
         }
     }
 
+    private suspend fun baseState(): SyncState = if (hasCatalog()) SyncState.UpToDate(completedAt) else SyncState.NoCatalog
+
     private suspend fun sync(candidate: CatalogCandidate) {
         _state.value = SyncState.Syncing(0f)
         try {
             resting = when (val result = importer.import(candidate.file) { _state.value = SyncState.Syncing(it) }) {
                 is ImportResult.Success -> {
                     cleanup.delete(candidate) // only after a committed import (C12, C13); a failed deletion changes nothing
-                    SyncState.UpToDate(now())
+                    completedAt = now()
+                    SyncState.UpToDate(completedAt)
                 }
                 is ImportResult.Failure -> SyncState.Error(result.diagnostics, result.failureCount) // file stays, retried at the next opportunity (C8)
             }

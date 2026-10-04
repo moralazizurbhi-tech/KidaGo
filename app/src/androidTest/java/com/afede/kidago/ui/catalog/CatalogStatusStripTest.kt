@@ -94,12 +94,25 @@ class CatalogStatusStripTest {
     }
 
     @Test
+    fun noCatalogShowsRedMessageWithItsOwnIconAndNoTapAction() {
+        state.value = SyncState.NoCatalog
+        show()
+        rule.onNodeWithText("No hay datos en el catálogo. Conecte el dispositivo al ordenador y pulse Importar en el programa.").assertIsDisplayed()
+        rule.onNodeWithText("Datos actualizados", substring = true).assertDoesNotExist()
+        rule.onNodeWithContentDescription("Sin catálogo").assertIsDisplayed()
+        rule.onNodeWithTag("strip-nocatalog").performClick() // nothing happens
+        rule.onNodeWithTag("strip-error-detail").assertDoesNotExist()
+        assertEquals(0, padlockTaps)
+    }
+
+    @Test
     fun eachStateIsDistinctByIcon() {
         val icons = listOf(
             SyncState.UpToDate(null) to "Actualizado",
             SyncState.Syncing(0.1f) to "Sincronizando",
             error to "Error",
             SyncState.NoFileAccess to "Sin permiso de archivos",
+            SyncState.NoCatalog to "Sin catálogo",
         )
         show()
         icons.forEach { (s, description) ->

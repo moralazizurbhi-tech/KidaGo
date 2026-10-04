@@ -68,7 +68,7 @@ class EscanearScreenTest {
             }
             val state by vm.state.collectAsState()
             val typed by vm.typed.collectAsState()
-            EscanearScreen(state, typed, vm::onTyped, vm::onSubmit, vm::onQuantitySubmit)
+            EscanearScreen(state, typed, vm::onTyped, vm::onSubmit, vm::onQuantitySubmit, onFinish = vm::onFinish)
         }
     }
 
@@ -92,6 +92,47 @@ class EscanearScreenTest {
 
     private fun noOutcome() {
         for (tag in listOf("scan-outcome-found", "scan-outcome-notfound", "scan-outcome-error")) rule.onNodeWithTag(tag).assertDoesNotExist()
+    }
+
+    // ---- "Listo" (C20)
+
+    @Test
+    fun listoShowsOnlyInFoundNotFoundAndError() {
+        val state = mutableStateOf<CaptureState>(CaptureState.Idle)
+        rule.setContent { KidaGoTheme { EscanearScreen(state.value, "", {}, {}, {}) } }
+        listOf(CaptureState.Idle, CaptureState.Typing, CaptureState.Searching).forEach {
+            state.value = it; rule.waitForIdle()
+            rule.onNodeWithTag("scan-listo").assertDoesNotExist()
+        }
+        listOf(CaptureState.Found(known, 1, false), CaptureState.NotFound(unknown), CaptureState.Error).forEach {
+            state.value = it; rule.waitForIdle()
+            rule.onNodeWithTag("scan-listo").assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun listoReturnsToIdleFromEachOutcomeAndLeavesTheListUnchanged() {
+        showViewModelScreen()
+        scan(unknown)
+        rule.onNodeWithTag("scan-listo").performClick(); rule.waitForIdle()
+        noOutcome(); rule.onNodeWithTag("scan-listo").assertDoesNotExist()
+        scanner.emit(ScanResult.Failure); rule.waitForIdle()
+        rule.onNodeWithTag("scan-listo").performClick(); rule.waitForIdle()
+        noOutcome()
+        scan(known)
+        rule.onNodeWithTag("scan-listo").performClick(); rule.waitForIdle()
+        noOutcome()
+        assertEquals(1, quantity(known)) // the default +1, nothing else
+    }
+
+    @Test
+    fun listoAppliesATypedCantidadThatWasNotSubmitted() {
+        showViewModelScreen()
+        scan(known)
+        rule.onNodeWithTag("scan-cantidad").performTextInput("5")
+        rule.onNodeWithTag("scan-listo").performClick(); rule.waitForIdle()
+        assertEquals(5, quantity(known))
+        noOutcome()
     }
 
     // ---- the six states, as drawn

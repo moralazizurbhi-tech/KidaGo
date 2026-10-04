@@ -40,6 +40,7 @@ class AppContainer(
         importer = CatalogImporter { catalog.replaceAll(it) },
         cleanup = CatalogFileCleanup(),
         catalogFolder = { File(settings.settings.value.catalogFolder) },
+        hasCatalog = catalog::hasCatalog,
     )
     val outcomeFeedback = OutcomeFeedbackTrigger({ settings.settings.value }, AndroidOutcomeCues(context))
     val catalogQuery = CatalogQueryFacade(catalogSync.state, catalog::contains)

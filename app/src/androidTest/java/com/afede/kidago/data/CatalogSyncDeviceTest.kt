@@ -35,6 +35,7 @@ class CatalogSyncDeviceTest {
             importer = CatalogImporter { store.replaceAll(it) },
             cleanup = CatalogFileCleanup(),
             catalogFolder = { folder },
+            hasCatalog = store::hasCatalog,
         )
         query = CatalogQueryFacade(sync.state, store::contains)
     }
@@ -51,7 +52,7 @@ class CatalogSyncDeviceTest {
     fun fullCycle_replacesCatalog_cleansUp_andKeepsLastGoodCatalogOnFailure() = runBlocking {
         sync.onDetectionOpportunity() // C16: folder created silently, nothing imported
         assertTrue(folder.isDirectory)
-        assertEquals(SyncState.UpToDate(null), sync.state.value)
+        assertEquals(SyncState.NoCatalog, sync.state.value)
 
         write("product-catalog-2026-01-01.txt", "1111111111111", "2222222222222")
         write("product-catalog-2026-02-01.txt", "3333333333333", "4444444444444")

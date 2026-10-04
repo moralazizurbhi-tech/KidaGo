@@ -41,6 +41,14 @@ class CatalogImporterTest {
     }
 
     @Test
+    fun emptyFileFailsAndNeverCommits() = runTest {
+        val result = importer.import(file("")) as ImportResult.Failure
+        assertEquals(0, commitCalls)
+        assertEquals(1, result.failureCount)
+        assertTrue(result.diagnostics.single().reason.contains("no contiene registros"))
+    }
+
+    @Test
     fun nonAsciiDigitsAreMalformed() = runTest {
         assertTrue(importer.import(file("١٢٣٤٥٦٧٨٩٠١٢٣")) is ImportResult.Failure) // 13 Arabic-Indic digits
     }

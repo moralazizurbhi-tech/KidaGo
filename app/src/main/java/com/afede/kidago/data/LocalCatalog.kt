@@ -17,6 +17,9 @@ interface CatalogDao {
     @Query("SELECT EXISTS(SELECT 1 FROM catalog_item WHERE barcode = :barcode)")
     suspend fun contains(barcode: String): Boolean
 
+    @Query("SELECT EXISTS(SELECT 1 FROM catalog_item)")
+    suspend fun hasAny(): Boolean
+
     @Query("DELETE FROM catalog_item")
     suspend fun deleteAll()
 
@@ -31,6 +34,9 @@ class LocalCatalogStore(private val db: AppDatabase) {
 
     /** Found / not found against the current catalog, barcode matched exactly. */
     suspend fun contains(barcode: String): Boolean = dao.contains(barcode)
+
+    /** True once a catalog has been imported; an empty import never succeeds, so empty means none (C22). */
+    suspend fun hasCatalog(): Boolean = dao.hasAny()
 
     /**
      * Atomic full replace: readers see the old catalog or the new one, never a mix. If [barcodes] throws

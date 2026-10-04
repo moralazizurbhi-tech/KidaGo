@@ -43,4 +43,10 @@ class EscanearViewModel(
     fun onSubmit() { manual.submit() }
 
     fun onQuantitySubmit(text: String) = coordinator.onQuantitySubmit(text)
+
+    /** "Listo": apply any pending "Cantidad", return to Idle and free the field (C20). */
+    fun onFinish(pendingQuantity: String) {
+        coordinator.finishScan(pendingQuantity)
+        manual.clear()
+    }
 }
