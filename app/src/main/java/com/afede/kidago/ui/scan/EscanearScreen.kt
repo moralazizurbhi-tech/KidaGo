@@ -107,7 +107,13 @@ fun EscanearScreen(
     onSubmit: () -> Unit,
     onQuantitySubmit: (String) -> Unit,
     modifier: Modifier = Modifier,
+    /** A catalog sync is running: the surface is replaced by the updating message, so nothing can be typed or scanned. */
+    syncing: Boolean = false,
 ) {
+    if (syncing) {
+        SyncingSurface(modifier)
+        return
+    }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
     val outcome = state is CaptureState.Found || state is CaptureState.NotFound || state == CaptureState.Error
@@ -137,6 +143,28 @@ fun EscanearScreen(
                 transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(220)) },
                 label = "capture-outcome",
             ) { shown -> Outcome(shown, onQuantitySubmit) }
+        }
+    }
+}
+
+/**
+ * The scanning surface while a catalog sync runs (Project UX Specification, Screen Composition; FEAT-001 UI Definition):
+ * disabled, not merely dimmed. The input is not composed at all, so there is no field to focus or type into, and the
+ * mascot with the updating message fills the area. When the sync ends the screen composes again and focuses the field.
+ */
+@Composable
+private fun SyncingSurface(modifier: Modifier) {
+    Box(modifier.fillMaxSize().testTag("screen-scan"), contentAlignment = Alignment.Center) {
+        Column(Modifier.padding(horizontal = 20.dp).testTag("scan-disabled"), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            // The project's mascot outline, reused unchanged from the shared empty state.
+            Image(painterResource(R.drawable.ic_tab_products), contentDescription = null, modifier = Modifier.size(width = 83.dp, height = 53.dp))
+            Text(
+                "La base de datos se está actualizando. Esto puede tardar unos minutos.",
+                style = MaterialTheme.typography.labelLarge,
+                color = KidaGoColors.Text,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.widthIn(max = 248.dp),
+            )
         }
     }
 }

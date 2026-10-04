@@ -9,6 +9,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.afede.kidago.data.ArchiveReason
+import com.afede.kidago.data.SyncState
 import com.afede.kidago.ui.catalog.CatalogStatusStrip
 import com.afede.kidago.ui.products.ProductosListViewModel
 import com.afede.kidago.ui.products.ProductosScreen
@@ -44,15 +45,16 @@ class MainActivity : ComponentActivity() {
                 val escanear: EscanearViewModel = viewModel(factory = viewModelFactory {
                     initializer {
                         with(container) {
-                            EscanearViewModel(scanner, catalogSync.state, catalogQuery::lookup, todaysList.entries, todaysList::addOrAccumulate, todaysList::applyQuantity)
+                            EscanearViewModel(scanner, catalogSync.state, catalogQuery::lookup, todaysList.entries, todaysList::addOrAccumulate, todaysList::applyQuantity, outcomeFeedback::onOutcome)
                         }
                     }
                 })
                 val captureState by escanear.state.collectAsState()
                 val typed by escanear.typed.collectAsState()
                 AppShell(
+                    productsBadge = productos?.total ?: 0, // the live total of the list, the same number Productos shows in its header
                     headerContent = { CatalogStatusStrip(sync, onNoFileAccessTap = container.fileAccess::openSettings) },
-                    scanScreen = { EscanearScreen(captureState, typed, escanear::onTyped, escanear::onSubmit, escanear::onQuantitySubmit) },
+                    scanScreen = { EscanearScreen(captureState, typed, escanear::onTyped, escanear::onSubmit, escanear::onQuantitySubmit, syncing = sync is SyncState.Syncing) },
                     productsScreen = { ProductosScreen(productos, products.confirmation, products.removal::onLongPress) },
                     settingsScreen = {
                         AjustesScreen(ajustesState, ajustes::onSoundToggle, ajustes::onVibrationToggle, ajustes::onFolderSubmit, ajustes.confirmation, ajustes.clear::onClearTapped)
@@ -68,5 +70,6 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         container.appScope.launch { container.catalogSync.onDetectionOpportunity() }
+        container.appScope.launch { container.listMirror.onLaunchOrResume() } // export-reset detection, then mirroring (FEAT-002 C13, C14, C19)
     }
 }

@@ -4,6 +4,8 @@
     <!-- "All files access": the exchange files live in shared storage (Project Architecture) -->
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
 
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <application
         android:name=".KidaGoApp"
         android:allowBackup="false"

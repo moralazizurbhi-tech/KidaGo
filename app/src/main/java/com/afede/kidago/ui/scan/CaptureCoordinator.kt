@@ -40,6 +40,8 @@ class CaptureCoordinator(
     entries: Flow<List<ListEntry>>,
     private val addOrAccumulate: suspend (String) -> AddResult,
     private val applyQuantity: suspend (code: String, quantityBefore: Int, n: Int) -> Boolean,
+    /** Told once per transition into Found, Not Found or Error (the OutcomeFeedbackTrigger); never on a "Cantidad" update. */
+    private val onOutcome: (CaptureState) -> Unit = {},
 ) {
     private val _state = MutableStateFlow<CaptureState>(CaptureState.Idle)
     val state: StateFlow<CaptureState> = _state
@@ -73,7 +75,7 @@ class CaptureCoordinator(
         inFlight?.cancel()
         latest = null
         if (capture !is ScanResult.Code) { // C8: an unreadable scan is an Error, never a lookup
-            _state.value = CaptureState.Error
+            outcome(CaptureState.Error)
             return
         }
         _state.value = CaptureState.Searching
@@ -82,16 +84,21 @@ class CaptureCoordinator(
 
     private suspend fun resolve(code: String) {
         when (lookup(code)) {
-            LookupResult.NotFound -> _state.value = CaptureState.NotFound(code)
+            LookupResult.NotFound -> outcome(CaptureState.NotFound(code))
             LookupResult.Unavailable -> _state.value = CaptureState.Idle // a sync began after capture was accepted
             LookupResult.Found -> {
                 // Once the lookup matched, the scan is counted even if a newer capture supersedes it right now.
                 val added = withContext(NonCancellable) { addOrAccumulate(code) }
                 currentCoroutineContext().ensureActive()
                 latest = Scan(code, added.quantityBefore, added.wasExisting)
-                _state.value = CaptureState.Found(code, added.quantityAfter, added.wasExisting)
+                outcome(CaptureState.Found(code, added.quantityAfter, added.wasExisting))
             }
         }
+    }
+
+    private fun outcome(state: CaptureState) {
+        _state.value = state
+        onOutcome(state)
     }
 
     /** "Cantidad" submitted: a whole number 1..99 replaces the +1 of the latest Found scan; anything else is ignored. */

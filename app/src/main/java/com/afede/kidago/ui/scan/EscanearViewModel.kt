@@ -19,8 +19,9 @@ class EscanearViewModel(
     entries: Flow<List<ListEntry>>,
     addOrAccumulate: suspend (String) -> AddResult,
     applyQuantity: suspend (code: String, quantityBefore: Int, n: Int) -> Boolean,
+    onOutcome: (CaptureState) -> Unit = {},
 ) : ViewModel() {
-    private val coordinator = CaptureCoordinator(viewModelScope, syncState, lookup, entries, addOrAccumulate, applyQuantity)
+    private val coordinator = CaptureCoordinator(viewModelScope, syncState, lookup, entries, addOrAccumulate, applyQuantity, onOutcome)
     private val manual = ManualEntryInput(coordinator::onCapture)
 
     @Suppress("unused") // collects from the scanner for as long as this ViewModel lives

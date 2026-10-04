@@ -24,10 +24,12 @@ class CaptureCoordinatorTest {
     private val list = MutableStateFlow<List<ListEntry>>(emptyList())
     private val sync = MutableStateFlow<SyncState>(SyncState.UpToDate(null))
     private var seq = 0L
+    private val outcomes = mutableListOf<CaptureState>()
 
     private fun qty(code: String) = list.value.firstOrNull { it.code == code }?.quantity
 
     private fun TestScope.coordinator() = CaptureCoordinator(
+        onOutcome = { outcomes += it },
         scope = backgroundScope,
         syncState = sync,
         lookup = { code ->
@@ -194,5 +196,16 @@ class CaptureCoordinatorTest {
         list.value = list.value.filter { it.code != "Z" } // unrelated change leaves Found alone
         runCurrent()
         assertEquals(CaptureState.Found("B", 1, false), c.state.value)
+    }
+
+    @Test
+    fun outcomeIsAnnouncedOncePerTransitionNeverForSearchingTypingOrCantidad() = runTest {
+        val c = coordinator()
+        c.onTyping(true)
+        c.onCapture(code("A")); runCurrent()
+        c.onQuantitySubmit("3"); runCurrent()
+        c.onCapture(code("Z")); runCurrent()
+        c.onCapture(ScanResult.Failure)
+        assertEquals(listOf(CaptureState.Found("A", 1, false), CaptureState.NotFound("Z"), CaptureState.Error), outcomes)
     }
 }
