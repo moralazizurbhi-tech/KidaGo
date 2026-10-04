@@ -105,7 +105,7 @@ fun KidaGoTextField(
         onValueChange = onValueChange,
         modifier = modifier,
         label = label?.let { { Text(it) } },
-        placeholder = placeholder?.let { { Text(it, color = KidaGoColors.Border) } },
+        placeholder = placeholder?.let { { Text(it, color = KidaGoColors.TextMuted) } },
         singleLine = singleLine,
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,

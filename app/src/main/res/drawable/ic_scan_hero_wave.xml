@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Soft red wave behind the Escanear hero barcode (Figma "KidaGo" node 47:2503: stroke #E3001B at 10%, 16 wide, round caps). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="323dp" android:height="49dp" android:viewportWidth="323" android:viewportHeight="49">
+    <path
+        android:pathData="M8.00195,23.5C8.00195,23.5 46.1411,41 71.4193,41C96.6976,41 113.106,8 154.35,8C195.593,8 197.811,24 229.298,32.5C260.785,41 314.002,23.5 314.002,23.5"
+        android:strokeColor="#E3001B" android:strokeAlpha="0.1" android:strokeWidth="16" android:strokeLineCap="round" />
+</vector>

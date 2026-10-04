@@ -25,6 +25,7 @@ object KidaGoColors {
     val Surface = Color(0xFFFFFFFF)
     val Border = Color(0xFFD9D9D9)
     val Text = Color(0xFF1D1D1D)
+    val TextMuted = Text.copy(alpha = 0.6f) // placeholders, captions: Figma renders them at 60% of the text colour
     val Accent = Color(0xFFE3001B) // active/on and critical alert
     val SuccessText = Color(0xFF1B882B)
     val SuccessIcon = Color(0xFF06752D)

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Barcode icon inside the Escanear input (Figma "KidaGo" node 47:2273, 32x32). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="32dp" android:height="32dp" android:viewportWidth="32" android:viewportHeight="32">
+    <path android:pathData="M6.13333,5.33334H4V26.6667H6.13333V5.33334Z" android:fillColor="#1D1D1D" />
+    <path android:pathData="M12.2667,5.33334H8.26667V26.6667H12.2667V5.33334Z" android:fillColor="#1D1D1D" />
+    <path android:pathData="M16.2667,5.33334H14.1333V26.6667H16.2667V5.33334Z" android:fillColor="#1D1D1D" />
+    <path android:pathData="M20.8,5.33334H17.8667V26.6667H20.8V5.33334Z" android:fillColor="#1D1D1D" />
+    <path android:pathData="M24.8,5.33334H22.6667V26.6667H24.8V5.33334Z" android:fillColor="#1D1D1D" />
+    <path android:pathData="M29.8667,5.33334H26.4V26.6667H29.8667V5.33334Z" android:fillColor="#1D1D1D" />
+</vector>

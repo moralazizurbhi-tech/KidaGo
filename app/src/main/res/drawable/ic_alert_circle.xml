@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Alert-circle (circle with exclamation mark): Not Found and Error badges, rescan warning (FEAT-002 UI, Iconography). Tint at use. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path
+        android:pathData="M12,2 A10,10 0 1,1 12,22 A10,10 0 1,1 12,2 Z"
+        android:strokeColor="#FF000000" android:strokeWidth="2" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path
+        android:pathData="M12,8 L12,12 M12,16 L12.01,16"
+        android:strokeColor="#FF000000" android:strokeWidth="2" android:strokeLineCap="round" android:strokeLineJoin="round" />
+</vector>

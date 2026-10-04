@@ -12,6 +12,8 @@ import com.afede.kidago.data.ArchiveReason
 import com.afede.kidago.ui.catalog.CatalogStatusStrip
 import com.afede.kidago.ui.products.ProductosListViewModel
 import com.afede.kidago.ui.products.ProductosScreen
+import com.afede.kidago.ui.scan.EscanearScreen
+import com.afede.kidago.ui.scan.EscanearViewModel
 import com.afede.kidago.ui.settings.AjustesScreen
 import com.afede.kidago.ui.settings.AjustesViewModel
 import com.afede.kidago.ui.shell.AppShell
@@ -39,8 +41,18 @@ class MainActivity : ComponentActivity() {
                     }
                 })
                 val ajustesState by ajustes.state.collectAsState()
+                val escanear: EscanearViewModel = viewModel(factory = viewModelFactory {
+                    initializer {
+                        with(container) {
+                            EscanearViewModel(scanner, catalogSync.state, catalogQuery::lookup, todaysList.entries, todaysList::addOrAccumulate, todaysList::applyQuantity)
+                        }
+                    }
+                })
+                val captureState by escanear.state.collectAsState()
+                val typed by escanear.typed.collectAsState()
                 AppShell(
                     headerContent = { CatalogStatusStrip(sync, onNoFileAccessTap = container.fileAccess::openSettings) },
+                    scanScreen = { EscanearScreen(captureState, typed, escanear::onTyped, escanear::onSubmit, escanear::onQuantitySubmit) },
                     productsScreen = { ProductosScreen(productos, products.confirmation, products.removal::onLongPress) },
                     settingsScreen = {
                         AjustesScreen(ajustesState, ajustes::onSoundToggle, ajustes::onVibrationToggle, ajustes::onFolderSubmit, ajustes.confirmation, ajustes.clear::onClearTapped)
