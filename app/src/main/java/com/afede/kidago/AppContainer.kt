@@ -15,7 +15,7 @@ import com.afede.kidago.data.LocalCatalogStore
 import com.afede.kidago.data.SettingsStore
 import com.afede.kidago.data.TodaysListEntryStore
 import com.afede.kidago.scanner.BarcodeScanner
-import com.afede.kidago.scanner.FakeBarcodeScanner
+import com.afede.kidago.scanner.EastaeonBarcodeScanner
 import com.afede.kidago.ui.scan.AndroidOutcomeCues
 import com.afede.kidago.ui.scan.OutcomeFeedbackTrigger
 import kotlinx.coroutines.CoroutineScope
@@ -26,7 +26,7 @@ import java.io.File
 /** Manual dependency injection: the single place that picks implementations. */
 class AppContainer(
     context: Context,
-    val scanner: BarcodeScanner = FakeBarcodeScanner(), // swapped for the vendor SDK implementation later
+    val scanner: BarcodeScanner = EastaeonBarcodeScanner(context.applicationContext),
 ) {
     val database: AppDatabase =
         Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "kidago.db").build()
