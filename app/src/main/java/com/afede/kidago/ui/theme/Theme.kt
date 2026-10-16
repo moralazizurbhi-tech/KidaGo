@@ -87,7 +87,7 @@ val KidaGoColorScheme: ColorScheme = lightColorScheme(
 )
 
 @Composable
-fun KidaGoTheme(content: @Composable () -> Unit) {
+fun KidaGoTheme(content: @Composable () -> Unit) = DesignPixels {
     MaterialTheme(
         colorScheme = KidaGoColorScheme,
         typography = KidaGoTypography,

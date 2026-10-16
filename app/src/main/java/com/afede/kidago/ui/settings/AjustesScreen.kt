@@ -37,6 +37,7 @@ import com.afede.kidago.ui.components.ConfirmationController
 import com.afede.kidago.ui.components.ConfirmationHost
 import com.afede.kidago.ui.theme.KidaGoColors
 import com.afede.kidago.ui.theme.KidaGoShapes
+import com.afede.kidago.ui.NoSoftKeyboard
 import com.afede.kidago.ui.theme.KidaGoSpacing
 import com.afede.kidago.ui.theme.KidaGoSwitch
 import com.afede.kidago.ui.theme.KidaGoTextField
@@ -54,11 +55,15 @@ fun AjustesScreen(
     confirmation: ConfirmationController,
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
+    /** The device has a physical keyboard with digits (PhysicalKeyboardProbe): the folder field opens no on-screen keyboard. */
+    physicalKeyboard: Boolean = true,
 ) {
-    Column(modifier.fillMaxSize().testTag("screen-settings").verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = KidaGoSpacing.Gap)) {
+    NoSoftKeyboard(physicalKeyboard) { Column(modifier.fillMaxSize().testTag("screen-settings").verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = KidaGoSpacing.Gap)) {
+        // Fit (FEAT-004 UI Definition): 8 px between rows and 16 px of top padding, so the five rows clear the tab bar by 16 px.
         Column(
-            Modifier.fillMaxWidth().background(KidaGoColors.Surface, KidaGoShapes.Card).padding(KidaGoSpacing.Outer),
-            verticalArrangement = Arrangement.spacedBy(KidaGoSpacing.Gap),
+            Modifier.fillMaxWidth().background(KidaGoColors.Surface, KidaGoShapes.Card).testTag("ajustes-card")
+                .padding(start = KidaGoSpacing.Outer, end = KidaGoSpacing.Outer, top = KidaGoSpacing.Gap, bottom = KidaGoSpacing.Outer),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             ToggleRow("Sonido", "Utilizar alertas de sonido al escanear", state.soundEnabled, "ajustes-sound", onSoundToggle)
             HorizontalDivider(color = KidaGoColors.Border)
@@ -70,15 +75,15 @@ fun AjustesScreen(
             Spacer(Modifier.height(8.dp))
             ClearRow(onClear)
         }
-    }
+    } }
     ConfirmationHost(confirmation)
 }
 
 @Composable
 private fun RowLabel(label: String, subtext: String?) {
     Column {
-        Text(label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = KidaGoColors.Text)
-        if (subtext != null) Text(subtext, style = MaterialTheme.typography.bodyMedium, color = KidaGoColors.Text)
+        Text(label, style = MaterialTheme.typography.titleLarge, color = KidaGoColors.Text) // bold 20 px
+        if (subtext != null) Text(subtext, style = MaterialTheme.typography.bodyLarge, color = KidaGoColors.Text) // regular 16 px
     }
 }
 
@@ -112,8 +117,8 @@ private fun AboutRow(version: String) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Icon(Icons.Filled.Info, contentDescription = null, tint = KidaGoColors.Text, modifier = Modifier.size(24.dp))
         Column {
-            Text("Acerca de", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = KidaGoColors.Text)
-            Text("KidaGo v$version", style = MaterialTheme.typography.bodyMedium, color = KidaGoColors.Text, modifier = Modifier.testTag("ajustes-version"))
+            Text("Acerca de", style = MaterialTheme.typography.titleLarge, color = KidaGoColors.Text)
+            Text("KidaGo v$version", style = MaterialTheme.typography.bodyLarge, color = KidaGoColors.Text, modifier = Modifier.testTag("ajustes-version"))
         }
     }
 }
@@ -127,6 +132,6 @@ private fun ClearRow(onClear: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Icon(Icons.Filled.Delete, contentDescription = null, tint = KidaGoColors.Accent, modifier = Modifier.size(20.dp))
-        Text("Vaciar lista", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = KidaGoColors.Accent)
+        Text("Vaciar lista", style = MaterialTheme.typography.titleLarge, color = KidaGoColors.Accent)
     }
 }

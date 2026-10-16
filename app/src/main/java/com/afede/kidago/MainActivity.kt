@@ -51,13 +51,14 @@ class MainActivity : ComponentActivity() {
                 })
                 val captureState by escanear.state.collectAsState()
                 val typed by escanear.typed.collectAsState()
+                val physicalKeyboard by container.keyboardProbe.present.collectAsState()
                 AppShell(
                     productsBadge = productos?.total ?: 0, // the live total of the list, the same number Productos shows in its header
                     headerContent = { CatalogStatusStrip(sync, onNoFileAccessTap = container.fileAccess::openSettings) },
-                    scanScreen = { EscanearScreen(captureState, typed, escanear::onTyped, escanear::onSubmit, escanear::onQuantitySubmit, syncing = sync is SyncState.Syncing, onFinish = escanear::onFinish) },
+                    scanScreen = { EscanearScreen(captureState, typed, escanear::onTyped, escanear::onSubmit, escanear::onQuantitySubmit, syncing = sync is SyncState.Syncing, onFinish = escanear::onFinish, physicalKeyboard = physicalKeyboard) },
                     productsScreen = { ProductosScreen(productos, products.confirmation, products.removal::onLongPress, removalState = products.removal.state.collectAsState().value) },
                     settingsScreen = {
-                        AjustesScreen(ajustesState, ajustes::onSoundToggle, ajustes::onVibrationToggle, ajustes::onFolderSubmit, ajustes.confirmation, ajustes.clear::onClearTapped)
+                        AjustesScreen(ajustesState, ajustes::onSoundToggle, ajustes::onVibrationToggle, ajustes::onFolderSubmit, ajustes.confirmation, ajustes.clear::onClearTapped, physicalKeyboard = physicalKeyboard)
                     },
                 )
             }
@@ -69,6 +70,7 @@ class MainActivity : ComponentActivity() {
     // onResume runs at launch and at every return to the foreground: the catalog detection opportunities (FEAT-001 C1, C17).
     override fun onResume() {
         super.onResume()
+        container.keyboardProbe.refresh() // input devices may have changed while away (FEAT-002 PhysicalKeyboardProbe)
         container.appScope.launch { container.catalogSync.onDetectionOpportunity() }
         container.appScope.launch { container.listMirror.onLaunchOrResume() } // export-reset detection, then mirroring (FEAT-002 C13, C14, C19)
     }

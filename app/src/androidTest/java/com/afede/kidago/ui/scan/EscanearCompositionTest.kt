@@ -12,6 +12,9 @@ import com.afede.kidago.data.SyncState
 import com.afede.kidago.ui.catalog.CatalogStatusStrip
 import com.afede.kidago.ui.shell.AppShell
 import com.afede.kidago.ui.theme.KidaGoTheme
+import androidx.compose.ui.unit.height
+import androidx.compose.ui.unit.width
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -76,5 +79,16 @@ class EscanearCompositionTest {
         show()
         rule.onNodeWithTag("scan-input").assertIsDisplayed()
         rule.onNodeWithTag("scan-disabled").assertDoesNotExist()
+    }
+
+    @Test
+    fun theDisabledSurfaceShowsTheMascotAt83x83AndAMessageNoWiderThan248() {
+        sync.value = SyncState.Syncing(0.4f)
+        show()
+        val mascot = rule.onNodeWithTag("scan-mascot").getUnclippedBoundsInRoot()
+        assertEquals(83f, mascot.width.value, 0.5f)
+        assertEquals(83f, mascot.height.value, 0.5f)
+        val message = rule.onNodeWithText("La base de datos se está actualizando. Esto puede tardar unos minutos.").getUnclippedBoundsInRoot()
+        assertTrue("message at most 248 wide", message.width.value <= 248.5f)
     }
 }
