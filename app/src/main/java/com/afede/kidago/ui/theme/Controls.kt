@@ -41,7 +41,7 @@ fun KidaGoButton(
             disabledContainerColor = KidaGoColors.Border,
             disabledContentColor = KidaGoColors.Text,
         ),
-    ) { Text(text, style = MaterialTheme.typography.labelLarge) }
+    ) { Text(text, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false) }
 }
 
 /** Secondary/neutral action (e.g. declining a confirmation): outlined pill. */
@@ -63,7 +63,7 @@ fun KidaGoNeutralButton(
             containerColor = KidaGoColors.Surface,
             contentColor = KidaGoColors.Text,
         ),
-    ) { Text(text, style = MaterialTheme.typography.labelLarge) }
+    ) { Text(text, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false) }
 }
 
 /** Toggle: red when on, neutral when off. */
