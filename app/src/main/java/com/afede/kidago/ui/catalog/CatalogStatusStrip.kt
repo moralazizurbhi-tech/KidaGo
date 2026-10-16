@@ -101,9 +101,12 @@ private fun StripRow(icon: StripIcon, text: String, tag: String? = null, onClick
     var row = Modifier.fillMaxWidth()
     if (tag != null) row = row.testTag(tag)
     if (onClick != null) row = row.clickable(role = role, onClick = onClick)
-    Row(row.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(KidaGoSpacing.Gap)) {
+    // The icon stays on the first line; the text takes the remaining width and wraps (at most two lines for No Catalog).
+    // The icon-to-text gap is 8 px for Up To Date and Syncing and 16 px for the other states.
+    val gap = if (icon == StripIcon.Dot || icon == StripIcon.Spinner) 8.dp else KidaGoSpacing.Gap
+    Row(row.padding(vertical = 4.dp), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(gap)) {
         StatusIcon(icon)
-        Text(text, style = MaterialTheme.typography.labelMedium, color = textColor)
+        Text(text, style = MaterialTheme.typography.labelMedium, color = textColor, modifier = Modifier.weight(1f).testTag("strip-text"))
     }
 }
 
@@ -118,7 +121,7 @@ private fun StatusIcon(icon: StripIcon) {
         },
         label = "strip-icon",
     ) { kind ->
-        Box(Modifier.size(IconSize), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(IconSize).testTag("strip-icon"), contentAlignment = Alignment.Center) {
             when (kind) {
                 StripIcon.Dot -> Box(Modifier.size(12.dp).clip(KidaGoShapes.Pill).background(KidaGoColors.SuccessText).iconDescription("Actualizado"))
                 StripIcon.Spinner -> CircularProgressIndicator(

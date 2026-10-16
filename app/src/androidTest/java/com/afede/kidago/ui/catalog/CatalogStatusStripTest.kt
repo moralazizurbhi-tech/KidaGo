@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.unit.height
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import com.afede.kidago.data.RecordDiagnostic
@@ -133,5 +134,42 @@ class CatalogStatusStripTest {
         rule.onNodeWithContentDescription("Ajustes").performClick()
         rule.onNodeWithTag("screen-settings").assertIsDisplayed()
         rule.onNodeWithTag("strip-noaccess").assertIsDisplayed()
+    }
+
+    // TASK-048: the strip at the PDA's scale (FEAT-001 UI Definition, Spacing and Layout).
+    private fun bounds(tag: String) = rule.onNodeWithTag(tag, useUnmergedTree = true).getUnclippedBoundsInRoot()
+
+    @Test
+    fun stripAlignsToThe32pxMargins() {
+        state.value = SyncState.NoFileAccess
+        show()
+        val frame = bounds("tab-bar") // full width of the frame, in design px
+        val strip = bounds("strip-noaccess")
+        assertEquals(32f, strip.left.value, 0.5f)
+        assertEquals(frame.right.value - 32f, strip.right.value, 0.5f)
+    }
+
+    @Test
+    fun iconToTextGapIs8InUpToDateAndSyncingAnd16InTheOtherStates() {
+        val expected = listOf(
+            SyncState.UpToDate(null) to 8f, SyncState.Syncing(0.5f) to 8f,
+            error to 16f, SyncState.NoFileAccess to 16f, SyncState.NoCatalog to 16f,
+        )
+        show()
+        expected.forEach { (s, gap) ->
+            state.value = s
+            rule.waitForIdle()
+            assertEquals("$s", gap, bounds("strip-text").left.value - bounds("strip-icon").right.value, 0.5f)
+        }
+    }
+
+    @Test
+    fun noCatalogTextIs12pxTakesAtMostTwoLinesAndNeverCoversTheContentBelow() {
+        state.value = SyncState.NoCatalog
+        show()
+        val text = bounds("strip-text")
+        assertTrue("at most two 16 px lines (three would be 48), was ${text.height.value}", text.height.value <= 34f)
+        assertTrue("content below is not covered", bounds("strip-nocatalog").bottom <= bounds("screen-scan").top)
+        assertEquals(text.top.value, bounds("strip-icon").top.value, 0.5f) // the icon sits on the first line
     }
 }

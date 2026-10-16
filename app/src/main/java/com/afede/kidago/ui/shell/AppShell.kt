@@ -122,9 +122,9 @@ fun AppShell(
 
 @Composable
 private fun Header(onSettings: () -> Unit, content: @Composable () -> Unit) {
-    Column(Modifier.statusBarsPadding().padding(start = 20.dp, end = KidaGoSpacing.Gap, top = 12.dp)) {
+    Column(Modifier.statusBarsPadding().padding(top = 12.dp)) {
         Row(
-            Modifier.fillMaxWidth(),
+            Modifier.fillMaxWidth().padding(start = 20.dp, end = KidaGoSpacing.Gap),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
@@ -137,14 +137,15 @@ private fun Header(onSettings: () -> Unit, content: @Composable () -> Unit) {
                 Icon(painterResource(R.drawable.ic_settings), contentDescription = Destination.Settings.label, tint = KidaGoColors.Text)
             }
         }
-        content()
+        // The slot aligns to the 32 px content margin, like the screens below (FEAT-001 UI Definition, strip width).
+        Box(Modifier.fillMaxWidth().padding(horizontal = KidaGoSpacing.Outer)) { content() }
     }
 }
 
-// Figma frame: 480 wide, bar silhouette 506 x 157 starting just below the status of the screen; the visible part
-// of the bar is 135 high and the rest runs off the bottom edge.
+// Figma frame: 480 x 800 design px (1 dp = 1 design px, see DesignPixels). The bar silhouette is 506 x 157; its
+// visible part is 132 high (it starts at y=668) and the rest runs off the bottom edge.
 private const val FIGMA_WIDTH = 480f
-private val TabBarHeight = 135.dp
+private val TabBarHeight = 132.dp
 private val GestureInset = 24.dp
 private const val SVG_X = 21f // the exported SVG is 522 wide, centred on the 480 frame
 private const val SVG_Y = 4f
@@ -154,7 +155,7 @@ private fun TabBar(route: String?, productsBadge: Int, onSelect: (Destination) -
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val barPath = remember { PathParser().parsePathString(TAB_BAR_PATH).toPath() }
     // The Figma bar height already includes the gesture-bar area; only a taller (3-button) inset adds height.
-    BoxWithConstraints(Modifier.fillMaxWidth().height(TabBarHeight + (bottomInset - GestureInset).coerceAtLeast(0.dp)).clipToBounds()) {
+    BoxWithConstraints(Modifier.fillMaxWidth().height(TabBarHeight + (bottomInset - GestureInset).coerceAtLeast(0.dp)).clipToBounds().testTag("tab-bar")) {
         Canvas(Modifier.fillMaxSize()) {
             val s = size.width / FIGMA_WIDTH
             val shape = Path().apply {

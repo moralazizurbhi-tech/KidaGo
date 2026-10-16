@@ -17,6 +17,7 @@ import com.afede.kidago.data.TodaysListEntryStore
 import com.afede.kidago.scanner.BarcodeScanner
 import com.afede.kidago.scanner.EastaeonBarcodeScanner
 import com.afede.kidago.ui.scan.AndroidOutcomeCues
+import com.afede.kidago.ui.PhysicalKeyboardProbe
 import com.afede.kidago.ui.scan.OutcomeFeedbackTrigger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +33,7 @@ class AppContainer(
         Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "kidago.db").build()
     val fileAccess = FileAccessGuard.forContext(context)
     val settings = SettingsStore(context)
+    val keyboardProbe = PhysicalKeyboardProbe.forContext(context)
     val catalog = LocalCatalogStore(database)
     val todaysList = TodaysListEntryStore(database)
     val catalogSync = CatalogSyncCoordinator(

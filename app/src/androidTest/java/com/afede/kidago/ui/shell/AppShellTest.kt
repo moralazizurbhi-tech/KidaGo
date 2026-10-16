@@ -9,9 +9,11 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.performClick
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import com.afede.kidago.ui.theme.KidaGoTheme
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.height
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -35,6 +37,13 @@ class AppShellTest {
         rule.onNodeWithTag("screen-products").assertIsDisplayed()
         tab("Escanear").performClick()
         rule.onNodeWithTag("screen-scan").assertIsDisplayed()
+    }
+
+    @Test
+    fun tabBarIs132DesignPxHighSoItStartsAtY668OfTheFrame() {
+        // Bottom-anchored: in the 800 px frame a 132 px bar starts at y=668 (no navigation inset in a test window).
+        val bar = rule.onNodeWithTag("tab-bar").getUnclippedBoundsInRoot()
+        assertEquals(132f, bar.height.value, 0.5f)
     }
 
     @Test
