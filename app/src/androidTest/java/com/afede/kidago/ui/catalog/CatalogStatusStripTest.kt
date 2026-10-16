@@ -164,11 +164,11 @@ class CatalogStatusStripTest {
     }
 
     @Test
-    fun noCatalogTextIs12pxTakesAtMostTwoLinesAndNeverCoversTheContentBelow() {
+    fun noCatalogTextIs16pxTakesAtMostThreeLinesAndNeverCoversTheContentBelow() {
         state.value = SyncState.NoCatalog
         show()
         val text = bounds("strip-text")
-        assertTrue("at most two 16 px lines (three would be 48), was ${text.height.value}", text.height.value <= 34f)
+        assertTrue("at most three 20 px lines (four would be 80), was ${text.height.value}", text.height.value <= 72f)
         assertTrue("content below is not covered", bounds("strip-nocatalog").bottom <= bounds("screen-scan").top)
         assertEquals(text.top.value, bounds("strip-icon").top.value, 0.5f) // the icon sits on the first line
     }

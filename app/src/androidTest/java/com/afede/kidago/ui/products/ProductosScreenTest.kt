@@ -13,6 +13,7 @@ import androidx.compose.ui.test.up
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -61,6 +62,7 @@ class ProductosScreenTest {
 
     @Test
     fun emptyListShowsEmptyStateAndZeroCount() {
+        rule.waitUntil(5_000) { rule.onAllNodesWithTag("productos-empty").fetchSemanticsNodes().isNotEmpty() } // the state loads asynchronously
         rule.onNodeWithTag("productos-empty").assertIsDisplayed()
         rule.onNodeWithText("No hay productos escaneados").assertIsDisplayed()
         rule.onNodeWithText("Comienza a escanear para añadir productos a la lista").assertIsDisplayed()

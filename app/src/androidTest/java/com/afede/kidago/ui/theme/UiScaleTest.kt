@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -33,5 +34,12 @@ class UiScaleTest {
     fun at240dpiADesignPxIsAPhysicalPx() = assertEquals(24f to 16f, designPxAt(Density(1.5f, 1f)))
 
     @Test
-    fun theSameHoldsAtAnotherDensityAndFontScale() = assertEquals(24f to 16f, designPxAt(Density(2.75f, 1.3f)))
+    fun densityIsIgnoredButSystemFontScaleIsFollowed() {
+        val (px, textPx) = designPxAt(Density(2.75f, 1.3f))
+        assertEquals(24f, px)
+        assertTrue("16 sp grows with the system font size, was $textPx", textPx > 16f)
+    }
+
+    @Test
+    fun fontScaleIsCappedAt1_3() = assertTrue(designPxAt(Density(2.75f, 2f)).second <= 16f * 1.3f)
 }

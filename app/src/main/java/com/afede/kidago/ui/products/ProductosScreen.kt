@@ -83,7 +83,7 @@ private fun Header(total: Int) {
                 .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text(total.toString(), style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), color = KidaGoColors.Accent, modifier = Modifier.testTag("productos-count"))
+            Text(total.toString(), style = MaterialTheme.typography.labelMedium, color = KidaGoColors.Accent, modifier = Modifier.testTag("productos-count"))
         }
     }
 }

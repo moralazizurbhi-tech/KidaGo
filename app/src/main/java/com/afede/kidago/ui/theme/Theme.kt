@@ -51,12 +51,12 @@ private val heading = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.Bo
 
 val KidaGoTypography = Typography(
     headlineMedium = heading.copy(fontSize = 24.sp, lineHeight = 32.sp),
-    titleLarge = heading.copy(fontSize = 20.sp, lineHeight = 28.sp),
-    titleMedium = heading.copy(fontSize = 16.sp, lineHeight = 24.sp),
-    bodyLarge = body.copy(fontSize = 16.sp, lineHeight = 24.sp),
-    bodyMedium = body.copy(fontSize = 14.sp, lineHeight = 20.sp),
-    labelLarge = heading.copy(fontSize = 14.sp, lineHeight = 20.sp),
-    labelMedium = body.copy(fontSize = 12.sp, lineHeight = 16.sp),
+    titleLarge = heading.copy(fontSize = 24.sp, lineHeight = 32.sp),
+    titleMedium = heading.copy(fontSize = 20.sp, lineHeight = 28.sp),
+    bodyLarge = body.copy(fontSize = 20.sp, lineHeight = 28.sp),
+    bodyMedium = body.copy(fontSize = 20.sp, lineHeight = 28.sp),
+    labelLarge = heading.copy(fontSize = 20.sp, lineHeight = 28.sp),
+    labelMedium = body.copy(fontSize = 16.sp, lineHeight = 20.sp),
 )
 
 /** Pill for controls, rounded card for containers (the default container shape). */

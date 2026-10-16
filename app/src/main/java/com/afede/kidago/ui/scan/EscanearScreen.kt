@@ -101,7 +101,7 @@ private val HeroHeight = 102.dp
 private val SideMargin = 32.dp
 private val BlockGap = 12.dp // between badge, heading, subtext and the action row
 private val IllustrationGap = 32.dp // illustration (with its echoed code) to the outcome badge, and hero to the input pill
-private val EchoGap = 8.dp // hero to the echoed code (Found, Not Found)
+private val EchoGap = 2.dp // hero to the echoed code (Found, Not Found)
 private val EchoHeight = 32.dp
 private val ErrorGap = IllustrationGap - 1.dp // Error shows no code: the 1 px unseen focus holder completes the 32 px
 private val FieldHeight = 64.dp
@@ -268,7 +268,7 @@ private fun CodeField(
                 ) {
                     Image(painterResource(R.drawable.ic_scan_field), contentDescription = null, modifier = Modifier.size(32.dp))
                     Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                        if (typed.isEmpty()) Text("Introduce o escanea un código", style = style.copy(letterSpacing = 0.sp, fontSize = 16.sp, lineHeight = 24.sp), color = KidaGoColors.TextMuted)
+                        if (typed.isEmpty()) Text("Introduce o escanea un código", style = style.copy(letterSpacing = 0.sp, fontSize = 20.sp, lineHeight = 28.sp), color = KidaGoColors.TextMuted)
                         field()
                     }
                     if (typed.isNotEmpty()) ClearButton { onTyped("") }
@@ -409,7 +409,7 @@ private fun FoundActions(draft: String, onDraft: (String) -> Unit, onSubmit: (St
 @Composable
 private fun Cantidad(draft: String, onDraft: (String) -> Unit, onSubmit: (String) -> Unit, modifier: Modifier = Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Cantidad", style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 22.sp), color = KidaGoColors.Text)
+        Text("Cantidad", style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp), color = KidaGoColors.Text)
         KidaGoTextField(
             value = draft,
             onValueChange = { onDraft(it.filter { c -> c in '0'..'9' }.take(2)) },
