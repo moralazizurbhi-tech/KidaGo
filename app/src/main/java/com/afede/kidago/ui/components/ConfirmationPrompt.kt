@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.afede.kidago.ui.theme.KidaGoButton
 import com.afede.kidago.ui.theme.KidaGoColors
 import com.afede.kidago.ui.theme.KidaGoNeutralButton
@@ -81,10 +82,11 @@ fun DestructiveConfirmationPrompt(
     onConfirm: () -> Unit,
     onDecline: () -> Unit,
 ) {
-    Dialog(onDismissRequest = onDecline) {
-        Surface(shape = KidaGoShapes.Card, color = KidaGoColors.Surface) {
+    // Not the platform's default width: it is sized in real dp, which on the 480 px design canvas leaves no side margin.
+    Dialog(onDismissRequest = onDecline, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(Modifier.padding(horizontal = KidaGoSpacing.Outer), shape = KidaGoShapes.Card, color = KidaGoColors.Surface) {
             Column(Modifier.padding(KidaGoSpacing.Outer), verticalArrangement = Arrangement.spacedBy(KidaGoSpacing.Gap)) {
-                Text(title, style = MaterialTheme.typography.titleLarge)
+                Text(title, style = MaterialTheme.typography.titleMedium)
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),

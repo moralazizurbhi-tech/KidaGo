@@ -14,6 +14,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -321,6 +322,7 @@ class EscanearScreenTest {
         assertTyped("scan-cantidad", "12")
         rule.onNodeWithTag("scan-cantidad").performImeAction()
         rule.waitUntil(3_000) { quantity(known) == 12 }
+        rule.waitUntil(3_000) { rule.onAllNodesWithTag("scan-cantidad").fetchSemanticsNodes().isEmpty() } // Enter finishes the scan like "Listo"
     }
 
     @Test
@@ -330,8 +332,7 @@ class EscanearScreenTest {
         rule.waitUntil(3_000) { quantity(known) == 1 }
         rule.onNodeWithTag("scan-cantidad").performTextInput("0")
         rule.onNodeWithTag("scan-cantidad").performImeAction()
-        rule.waitForIdle()
-        assertEmpty("scan-cantidad")
+        rule.waitUntil(3_000) { rule.onAllNodesWithTag("scan-cantidad").fetchSemanticsNodes().isEmpty() } // back to Idle
         assertEquals(1, quantity(known))
     }
 

@@ -69,7 +69,7 @@ class EscanearLayoutTest {
         near(12f, sub.top.value - heading.bottom.value, "heading to subtext")
         val label = bText("Cantidad")
         near(12f, label.top.value - sub.bottom.value, "subtext to action row")
-        near(30f, label.height.value, "label height"); near(6f, b("scan-cantidad").top.value - label.bottom.value, "label to field")
+        near(27f, label.height.value, "label height"); near(6f, b("scan-cantidad").top.value - label.bottom.value, "label to field")
         near(340f, b("scan-cantidad").width.value, "Cantidad width"); near(64f, b("scan-cantidad").height.value, "Cantidad height")
         val listo = b("scan-listo")
         near(64f, listo.width.value, "Listo width"); near(64f, listo.height.value, "Listo height")

@@ -133,7 +133,8 @@ fun EscanearScreen(
         return
     }
     val focus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focus.requestFocus() }
+    // Found hands the focus to "Cantidad" so a quantity can be typed right after a scan; every other state keeps it on the input.
+    LaunchedEffect(state is CaptureState.Found) { if (state !is CaptureState.Found) focus.requestFocus() }
     val outcome = state is CaptureState.Found || state is CaptureState.NotFound || state == CaptureState.Error
     val gap by animateDpAsState(
         when { state is CaptureState.Found || state is CaptureState.NotFound -> EchoGap; state == CaptureState.Error -> ErrorGap; else -> IllustrationGap },
@@ -303,7 +304,7 @@ private fun Outcome(state: CaptureState, onQuantitySubmit: (String) -> Unit, onF
             heading = "Producto encontrado",
             headingColor = KidaGoColors.SuccessText,
             subtext = { if (state.wasExisting) RescanWarning(state.quantity) else Subtext("Añadido a la lista") },
-            extra = { FoundActions(draft, { draft = it }, onQuantitySubmit) { onFinish(draft) } },
+            extra = { FoundActions(draft, { draft = it }) { onFinish(draft) } },
             )
         }
         is CaptureState.NotFound -> Block(
@@ -395,9 +396,9 @@ private fun RescanWarning(total: Int) {
 
 /** Found's action row: "Cantidad" (340 wide) with "Listo" 12 px to its right, aligned to the field (416 in all). */
 @Composable
-private fun FoundActions(draft: String, onDraft: (String) -> Unit, onSubmit: (String) -> Unit, onFinish: () -> Unit) {
+private fun FoundActions(draft: String, onDraft: (String) -> Unit, onFinish: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(BlockGap)) {
-        Cantidad(draft, onDraft, onSubmit, Modifier.weight(1f))
+        Cantidad(draft, onDraft, onFinish, Modifier.weight(1f))
         ListoButton(onFinish)
     }
 }
@@ -407,19 +408,18 @@ private fun FoundActions(draft: String, onDraft: (String) -> Unit, onSubmit: (St
  * outside 1..99 empties back to the ghost with no message.
  */
 @Composable
-private fun Cantidad(draft: String, onDraft: (String) -> Unit, onSubmit: (String) -> Unit, modifier: Modifier = Modifier) {
+private fun Cantidad(draft: String, onDraft: (String) -> Unit, onDone: () -> Unit, modifier: Modifier = Modifier) {
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("Cantidad", style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp), color = KidaGoColors.Text)
         KidaGoTextField(
             value = draft,
             onValueChange = { onDraft(it.filter { c -> c in '0'..'9' }.take(2)) },
-            modifier = Modifier.fillMaxWidth().height(FieldHeight).shadow(3.dp, KidaGoShapes.Pill).testTag("scan-cantidad"),
+            modifier = Modifier.fillMaxWidth().height(FieldHeight).shadow(3.dp, KidaGoShapes.Pill).focusRequester(focus).testTag("scan-cantidad"),
             placeholder = "1",
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = {
-                onSubmit(draft)
-                if (draft.toIntOrNull()?.let { it in 1..99 } != true) onDraft("")
-            }),
+            keyboardActions = KeyboardActions(onDone = { onDone() }), // Enter does what "Listo" does: applies the typed quantity and returns to Idle
         )
     }
 }
