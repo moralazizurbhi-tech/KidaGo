@@ -10,6 +10,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -69,7 +70,7 @@ class EscanearScreenTest {
             }
             val state by vm.state.collectAsState()
             val typed by vm.typed.collectAsState()
-            EscanearScreen(state, typed, vm::onTyped, vm::onSubmit, vm::onQuantitySubmit, onFinish = vm::onFinish)
+            EscanearScreen(state, typed, vm::onTyped, vm::onSubmit, vm::onQuantitySubmit, onFinish = vm::onFinish, onQuantityEdit = vm::onQuantityEdit)
         }
     }
 
@@ -323,6 +324,19 @@ class EscanearScreenTest {
         rule.onNodeWithTag("scan-cantidad").performImeAction()
         rule.waitUntil(3_000) { quantity(known) == 12 }
         rule.waitUntil(3_000) { rule.onAllNodesWithTag("scan-cantidad").fetchSemanticsNodes().isEmpty() } // Enter finishes the scan like "Listo"
+    }
+
+    @Test
+    fun aRescanFromFoundAppliesThePendingCantidadThenStartsAnEmptyFocusedOne() {
+        showViewModelScreen()
+        scan(known)
+        rule.waitUntil(3_000) { quantity(known) == 1 }
+        rule.onNodeWithTag("scan-cantidad").performTextInput("5") // typed, not submitted
+        scan(known)
+        rule.waitUntil(3_000) { quantity(known) == 6 } // 0 + 5, then the rescan's +1
+        rule.onNodeWithText("Ya escaneado · Total acumulado: 6").assertIsDisplayed()
+        assertEmpty("scan-cantidad")
+        rule.onNodeWithTag("scan-cantidad").assertIsFocused()
     }
 
     @Test

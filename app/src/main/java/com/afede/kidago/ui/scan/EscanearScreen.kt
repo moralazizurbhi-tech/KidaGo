@@ -125,6 +125,8 @@ fun EscanearScreen(
     syncing: Boolean = false,
     /** "Listo" (C20): finish the scan; receives the "Cantidad" text typed but not submitted. */
     onFinish: (pendingQuantity: String) -> Unit = {},
+    /** Each edit of the "Cantidad" text, so the capture coordinator holds what is typed and not yet submitted. */
+    onQuantityEdit: (String) -> Unit = {},
     /** The device has a physical keyboard with digits (PhysicalKeyboardProbe): no field opens the on-screen keyboard. */
     physicalKeyboard: Boolean = true,
 ) {
@@ -165,7 +167,7 @@ fun EscanearScreen(
                 contentKey = { it::class },
                 transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(220)) },
                 label = "capture-outcome",
-            ) { shown -> Outcome(shown, onQuantitySubmit, onFinish) }
+            ) { shown -> Outcome(shown, onQuantitySubmit, onFinish, onQuantityEdit) }
         }
     } }
 }
@@ -290,21 +292,21 @@ private fun ClearButton(onClick: () -> Unit) {
 }
 
 @Composable
-private fun Outcome(state: CaptureState, onQuantitySubmit: (String) -> Unit, onFinish: (String) -> Unit) {
+private fun Outcome(state: CaptureState, onQuantitySubmit: (String) -> Unit, onFinish: (String) -> Unit, onQuantityEdit: (String) -> Unit) {
     when (state) {
         CaptureState.Searching -> Column(Modifier.padding(top = 55.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
             CircularProgressIndicator(Modifier.size(36.dp).testTag("scan-spinner"), color = KidaGoColors.Accent, trackColor = KidaGoColors.Accent.copy(alpha = 0.1f), strokeWidth = 4.dp)
             Text("Buscando producto...", style = MaterialTheme.typography.labelLarge, color = KidaGoColors.TextMuted)
         }
         is CaptureState.Found -> {
-            var draft by remember { mutableStateOf("") } // lives as long as this Found, so "Listo" can apply what was typed
+            var draft by remember(state.occurrence) { mutableStateOf("") } // one per Found, so a Found after a Found starts empty
             Block(
             tag = "scan-outcome-found",
             badge = { CircleBadge(KidaGoColors.SuccessIcon) { Icon(Icons.Filled.Check, null, tint = KidaGoColors.Surface, modifier = Modifier.size(32.dp)) } },
             heading = "Producto encontrado",
             headingColor = KidaGoColors.SuccessText,
             subtext = { if (state.wasExisting) RescanWarning(state.quantity) else Subtext("Añadido a la lista") },
-            extra = { FoundActions(draft, { draft = it }) { onFinish(draft) } },
+            extra = { FoundActions(draft, state.occurrence, { draft = it; onQuantityEdit(it) }) { onFinish(draft) } },
             )
         }
         is CaptureState.NotFound -> Block(
@@ -396,9 +398,9 @@ private fun RescanWarning(total: Int) {
 
 /** Found's action row: "Cantidad" (340 wide) with "Listo" 12 px to its right, aligned to the field (416 in all). */
 @Composable
-private fun FoundActions(draft: String, onDraft: (String) -> Unit, onFinish: () -> Unit) {
+private fun FoundActions(draft: String, occurrence: Int, onDraft: (String) -> Unit, onFinish: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(BlockGap)) {
-        Cantidad(draft, onDraft, onFinish, Modifier.weight(1f))
+        Cantidad(draft, occurrence, onDraft, onFinish, Modifier.weight(1f))
         ListoButton(onFinish)
     }
 }
@@ -408,9 +410,9 @@ private fun FoundActions(draft: String, onDraft: (String) -> Unit, onFinish: () 
  * outside 1..99 empties back to the ghost with no message.
  */
 @Composable
-private fun Cantidad(draft: String, onDraft: (String) -> Unit, onDone: () -> Unit, modifier: Modifier = Modifier) {
+private fun Cantidad(draft: String, occurrence: Int, onDraft: (String) -> Unit, onDone: () -> Unit, modifier: Modifier = Modifier) {
     val focus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focus.requestFocus() }
+    LaunchedEffect(occurrence) { focus.requestFocus() } // on every Found, including a Found after a Found
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("Cantidad", style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp), color = KidaGoColors.Text)
         KidaGoTextField(

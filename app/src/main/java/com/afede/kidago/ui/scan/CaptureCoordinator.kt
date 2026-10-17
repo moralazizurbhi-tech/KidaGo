@@ -21,7 +21,8 @@ sealed interface CaptureState {
     data object Idle : CaptureState
     data object Typing : CaptureState
     data object Searching : CaptureState
-    data class Found(val code: String, val quantity: Int, val wasExisting: Boolean) : CaptureState
+    /** [occurrence] tells one Found from the next even when the rest is equal, so the screen can reset "Cantidad" on each. */
+    data class Found(val code: String, val quantity: Int, val wasExisting: Boolean, val occurrence: Int = 0) : CaptureState
     data class NotFound(val code: String) : CaptureState
     data object Error : CaptureState
 }
@@ -50,6 +51,10 @@ class CaptureCoordinator(
     private class Scan(val code: String, val quantityBefore: Int, val wasExisting: Boolean)
 
     private var latest: Scan? = null
+    private var occurrences = 0
+
+    /** The "Cantidad" text typed and not yet submitted for [latest]; consumed once by the next capture or by "Listo". */
+    private var pending = ""
     private var inFlight: Job? = null
 
     init {
@@ -57,7 +62,7 @@ class CaptureCoordinator(
             entries.collect { list ->
                 val scan = latest ?: return@collect
                 if (list.none { it.code == scan.code }) { // removed, or the list was cleared (C17)
-                    latest = null
+                    latest = null; pending = ""
                     _state.value = CaptureState.Idle
                 }
             }
@@ -70,16 +75,31 @@ class CaptureCoordinator(
         else if (!hasText && _state.value == CaptureState.Typing) _state.value = CaptureState.Idle
     }
 
+    /** The screen reports each edit of "Cantidad"; kept here because a hardware capture never passes through the screen. */
+    fun onQuantityEdit(text: String) {
+        if (latest != null) pending = text
+    }
+
     fun onCapture(capture: ScanResult) {
         if (syncState.value is SyncState.Syncing) return
-        inFlight?.cancel()
+        val previous = inFlight
+        previous?.cancel()
+        val superseded = latest
+        val n = validQuantity(pending)
         latest = null
+        pending = ""
+        // The superseded Found's pending "Cantidad" is written first (C9, C11); joining the previous job keeps every store write in order.
+        suspend fun settle() {
+            previous?.join()
+            if (superseded != null && n != null) withContext(NonCancellable) { applyQuantity(superseded.code, superseded.quantityBefore, n) }
+        }
         if (capture !is ScanResult.Code) { // C8: an unreadable scan is an Error, never a lookup
             outcome(CaptureState.Error)
+            inFlight = scope.launch { settle() }
             return
         }
         _state.value = CaptureState.Searching
-        inFlight = scope.launch { resolve(capture.value) }
+        inFlight = scope.launch { settle(); resolve(capture.value) }
     }
 
     private suspend fun resolve(code: String) {
@@ -91,7 +111,7 @@ class CaptureCoordinator(
                 val added = withContext(NonCancellable) { addOrAccumulate(code) }
                 currentCoroutineContext().ensureActive()
                 latest = Scan(code, added.quantityBefore, added.wasExisting)
-                outcome(CaptureState.Found(code, added.quantityAfter, added.wasExisting))
+                outcome(CaptureState.Found(code, added.quantityAfter, added.wasExisting, ++occurrences))
             }
         }
     }
@@ -105,9 +125,11 @@ class CaptureCoordinator(
     fun onQuantitySubmit(text: String) {
         val scan = latest ?: return
         val n = validQuantity(text) ?: return
+        pending = "" // consumed: no later capture applies it again
         scope.launch {
             if (applyQuantity(scan.code, scan.quantityBefore, n) && latest === scan) {
-                _state.value = CaptureState.Found(scan.code, scan.quantityBefore + n, scan.wasExisting)
+                _state.value = (_state.value as? CaptureState.Found)?.copy(quantity = scan.quantityBefore + n)
+                    ?: CaptureState.Found(scan.code, scan.quantityBefore + n, scan.wasExisting)
             }
         }
     }
@@ -116,11 +138,12 @@ class CaptureCoordinator(
      * "Listo" (C20): from Found, Not Found or Error, back to Idle. On Found, a typed but unsubmitted [pendingQuantity]
      * is applied first exactly as a submit would (C11); no other list write happens.
      */
-    fun finishScan(pendingQuantity: String = "") {
+    fun finishScan(pendingQuantity: String = pending) {
         val state = _state.value
         if (state !is CaptureState.Found && state !is CaptureState.NotFound && state != CaptureState.Error) return
         val scan = latest
         val n = validQuantity(pendingQuantity)
+        pending = ""
         if (state !is CaptureState.Found || scan == null || n == null) {
             latest = null
             _state.value = CaptureState.Idle

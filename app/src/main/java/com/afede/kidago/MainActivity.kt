@@ -55,7 +55,7 @@ class MainActivity : ComponentActivity() {
                 AppShell(
                     productsBadge = productos?.total ?: 0, // the live total of the list, the same number Productos shows in its header
                     headerContent = { CatalogStatusStrip(sync, onNoFileAccessTap = container.fileAccess::openSettings) },
-                    scanScreen = { EscanearScreen(captureState, typed, escanear::onTyped, escanear::onSubmit, escanear::onQuantitySubmit, syncing = sync is SyncState.Syncing, onFinish = escanear::onFinish, physicalKeyboard = physicalKeyboard) },
+                    scanScreen = { EscanearScreen(captureState, typed, escanear::onTyped, escanear::onSubmit, escanear::onQuantitySubmit, syncing = sync is SyncState.Syncing, onFinish = escanear::onFinish, onQuantityEdit = escanear::onQuantityEdit, physicalKeyboard = physicalKeyboard) },
                     productsScreen = { ProductosScreen(productos, products.confirmation, products.removal::onLongPress, removalState = products.removal.state.collectAsState().value) },
                     settingsScreen = {
                         AjustesScreen(ajustesState, ajustes::onSoundToggle, ajustes::onVibrationToggle, ajustes::onFolderSubmit, ajustes.confirmation, ajustes.clear::onClearTapped, physicalKeyboard = physicalKeyboard)
