@@ -450,3 +450,8 @@ dist/
 # Android source sets named like build folders are source
 !app/src/debug/
 !app/src/release/
+
+# Release signing (never commit)
+keystore.properties
+*.jks
+*.keystore
