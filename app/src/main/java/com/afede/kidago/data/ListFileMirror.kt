@@ -45,6 +45,24 @@ class ListFileMirror(
         }
     }
 
+    /**
+     * The same export-reset check as [onLaunchOrResume], for while the app stays in the foreground: the desktop tool
+     * can empty the file at any moment and the app never resumes. Does nothing before the first launch pass, without
+     * access, or when the file is not empty; runs under the same lock as the mirror writes, so it never sees a file
+     * the mirror is in the middle of rewriting.
+     */
+    suspend fun checkForExport() = lock.withLock {
+        if (!mirroring || !hasAccess()) return
+        try {
+            if (file().exists() && file().readLines().none { it.isNotBlank() } && entries.first().isNotEmpty()) {
+                archiveForExport()
+                write(entries.first())
+            }
+        } catch (_: IOException) {
+            // the next check tries again
+        }
+    }
+
     private suspend fun rewrite() = lock.withLock {
         if (!hasAccess()) return
         try {

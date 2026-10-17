@@ -5,6 +5,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -19,6 +22,7 @@ import com.afede.kidago.ui.settings.AjustesScreen
 import com.afede.kidago.ui.settings.AjustesViewModel
 import com.afede.kidago.ui.shell.AppShell
 import com.afede.kidago.ui.theme.KidaGoTheme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -27,6 +31,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         container // open the database at launch
+        // The desktop tool can empty the list file while the app stays in the foreground, so look again every few seconds (FEAT-002 C14).
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                while (true) {
+                    delay(EXPORT_CHECK_INTERVAL_MS)
+                    container.listMirror.checkForExport()
+                }
+            }
+        }
         setContent {
             KidaGoTheme {
                 val sync by container.catalogSync.state.collectAsState()
@@ -73,5 +86,9 @@ class MainActivity : ComponentActivity() {
         container.keyboardProbe.refresh() // input devices may have changed while away (FEAT-002 PhysicalKeyboardProbe)
         container.appScope.launch { container.catalogSync.onDetectionOpportunity() }
         container.appScope.launch { container.listMirror.onLaunchOrResume() } // export-reset detection, then mirroring (FEAT-002 C13, C14, C19)
+    }
+
+    private companion object {
+        const val EXPORT_CHECK_INTERVAL_MS = 2_000L
     }
 }

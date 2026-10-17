@@ -92,4 +92,24 @@ class ListFileMirrorTest {
         m.onLaunchOrResume(); runCurrent()
         assertEquals("A,1\nB,1\n", file.readText())
     }
+
+    @Test
+    fun anExportWhileTheAppStaysInTheForegroundIsDetectedByTheCheck() = runTest {
+        set("A" to 2)
+        val m = mirror(); m.onLaunchOrResume(); runCurrent()
+        m.checkForExport()
+        assertEquals(0, exports) // the file still has the list
+        file.writeText("") // the desktop tool empties it
+        m.checkForExport(); runCurrent()
+        assertEquals(1, exports)
+        assertEquals(emptyList<ListEntry>(), list.value)
+        assertEquals("", file.readText())
+    }
+
+    @Test
+    fun theCheckDoesNothingBeforeTheFirstLaunchPass() = runTest {
+        dir.mkdirs(); file.writeText(""); set("A" to 2)
+        val m = mirror(); m.checkForExport()
+        assertEquals(0, exports)
+    }
 }
