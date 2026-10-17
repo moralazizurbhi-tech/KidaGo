@@ -1,0 +1,4 @@
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt" android:drawable="@drawable/splash_icon_vector">
+<target android:name="reveal"><aapt:attr name="android:animation"><objectAnimator android:propertyName="pathData" android:valueType="pathType" android:valueFrom="M0,75H108V108H0Z" android:valueTo="M0,54.28H108V108H0Z" android:startOffset="100" android:duration="650" android:interpolator="@android:interpolator/fast_out_slow_in"/></aapt:attr></target>
+<target android:name="beam"><aapt:attr name="android:animation"><objectAnimator android:propertyName="translateY" android:valueFrom="20.72" android:valueTo="0" android:startOffset="100" android:duration="650" android:interpolator="@android:interpolator/fast_out_slow_in"/></aapt:attr></target>
+</animated-vector>

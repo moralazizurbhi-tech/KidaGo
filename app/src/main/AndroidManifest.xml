@@ -9,8 +9,10 @@
     <application
         android:name=".KidaGoApp"
         android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        android:theme="@style/Theme.KidaGo">
         <activity
             android:name=".MainActivity"
             android:exported="true">
