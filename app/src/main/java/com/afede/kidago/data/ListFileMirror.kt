@@ -13,8 +13,8 @@ import java.io.FileOutputStream
 /**
  * Keeps `scanned-list.txt` equal to the current list and recognizes an export reset (FEAT-002 TD: ListFileMirror and
  * ExportResetDetector, one unit because their order is the whole point). At each launch/resume, [onLaunchOrResume]
- * first looks at the file — empty while the list has entries means the desktop tool exported, so the list is
- * archived and emptied (C14) — and only then starts mirroring (C13): the whole file is rewritten from the store after
+ * first looks at the file — empty while the list has entries means the desktop tool exported, so the user is
+ * asked whether to empty the list (C14); it is never emptied on its own — and only then starts mirroring (C13): the whole file is rewritten from the store after
  * every change, never before that first pass, so the mirror cannot overwrite a cleared file and hide the export.
  * While file access is missing nothing is read or written (C19); the next launch/resume after the grant realigns it.
  */
@@ -22,7 +22,7 @@ class ListFileMirror(
     private val file: () -> File,
     private val entries: Flow<List<ListEntry>>,
     private val hasAccess: () -> Boolean,
-    private val archiveForExport: suspend () -> Boolean,
+    private val onExportDetected: (atLaunch: Boolean) -> Unit,
 ) {
     private val lock = Mutex() // one file operation at a time; each write reads the list afresh under it
     private var mirroring = false
@@ -37,8 +37,8 @@ class ListFileMirror(
         if (!hasAccess()) return // C19: cannot read or write; mirroring resumes at the next pass after the grant
         try {
             // C14: an existing file with no lines, while the list has entries. A missing file is not "cleared".
-            if (file().exists() && file().readLines().none { it.isNotBlank() } && entries.first().isNotEmpty()) archiveForExport()
-            write(entries.first())
+            if (file().exists() && file().readLines().none { it.isNotBlank() } && entries.first().isNotEmpty()) onExportDetected(true)
+            write(entries.first()) // refills the file, so one export is reported once; the list is only emptied if the user says so
             mirroring = true
         } catch (_: IOException) {
             // the file could not be read or written: leave it alone, the next launch/resume tries again
@@ -55,7 +55,7 @@ class ListFileMirror(
         if (!mirroring || !hasAccess()) return
         try {
             if (file().exists() && file().readLines().none { it.isNotBlank() } && entries.first().isNotEmpty()) {
-                archiveForExport()
+                onExportDetected(false)
                 write(entries.first())
             }
         } catch (_: IOException) {
@@ -82,12 +82,13 @@ class ListFileMirror(
         val target = file()
         target.parentFile?.mkdirs()
         FileOutputStream(target).use { out ->
-            out.write(list.joinToString("") { "${it.code},${it.quantity}\n" }.toByteArray())
+            // CRLF: the internal ERP only reads Windows line endings
+            out.write(list.joinToString("") { "${it.code},${it.quantity}\r\n" }.toByteArray())
             out.fd.sync()
         }
     }
 
     companion object {
-        const val FILE_NAME = "scanned-list.txt"
+        const val FILE_NAME = "DATOS.txt"
     }
 }

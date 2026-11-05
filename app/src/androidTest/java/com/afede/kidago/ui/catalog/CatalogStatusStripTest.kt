@@ -73,7 +73,7 @@ class CatalogStatusStripTest {
         val before = rule.onNodeWithTag("screen-scan").getUnclippedBoundsInRoot().top
         rule.onNodeWithTag("strip-error-row").performClick()
         rule.onNodeWithTag("strip-error-detail").assertIsDisplayed()
-        rule.onNodeWithText("Puede que tengas que volver a hacer Importar.").assertIsDisplayed()
+        rule.onNodeWithText("Puede que tengas que volver a pulsar Actualizar PDA.").assertIsDisplayed()
         rule.onNodeWithText("Registro 7: «12345» - debe tener exactamente 13 dígitos, tiene 5").assertIsDisplayed()
         rule.onNodeWithText("y 2 más").assertIsDisplayed()
         assertTrue("content below is pushed down", rule.onNodeWithTag("screen-scan").getUnclippedBoundsInRoot().top > before)
@@ -98,7 +98,7 @@ class CatalogStatusStripTest {
     fun noCatalogShowsRedMessageWithItsOwnIconAndNoTapAction() {
         state.value = SyncState.NoCatalog
         show()
-        rule.onNodeWithText("No hay datos en el catálogo. Conecte el dispositivo al ordenador y pulse Importar en el programa.").assertIsDisplayed()
+        rule.onNodeWithText("No hay datos en el catálogo. Conecte el dispositivo al ordenador y pulse Actualizar PDA en el programa.").assertIsDisplayed()
         rule.onNodeWithText("Datos actualizados", substring = true).assertDoesNotExist()
         rule.onNodeWithContentDescription("Sin catálogo").assertIsDisplayed()
         rule.onNodeWithTag("strip-nocatalog").performClick() // nothing happens

@@ -22,7 +22,7 @@ class BarcodeScannerInput(scanner: BarcodeScanner, scope: CoroutineScope, onCapt
 
 /**
  * Manual entry (FEAT-002 TD, ManualEntryInput): the typed value is digits only, at most 13. It is handed off only by
- * [submit], and only when it is exactly 13 digits (C2, C3); nothing is padded or converted.
+ * [submit], and only when it is not empty (C2, C3; short codes exist in the catalog); nothing is padded or converted.
  */
 class ManualEntryInput(private val onCapture: (ScanResult) -> Unit) {
     private val _value = MutableStateFlow("")
@@ -37,7 +37,7 @@ class ManualEntryInput(private val onCapture: (ScanResult) -> Unit) {
     /** Returns true when the value was handed off; otherwise nothing happens and the entry stays as typed. */
     fun submit(): Boolean {
         val code = _value.value
-        if (code.length != CODE_LENGTH) return false
+        if (code.isEmpty()) return false
         onCapture(ScanResult.Code(code))
         return true
     }

@@ -60,12 +60,13 @@ class CatalogImporter(private val commit: suspend (List<String>) -> Unit) {
     }
 
     // ASCII digits only: Char.isDigit() would accept other scripts' digits.
-    private fun isValid(line: String) = line.length == 13 && line.all { it in '0'..'9' }
+    // Shorter than 12 is kept as is (typed by hand on the scanner); 12 must have been padded to 13 by the desktop app.
+    private fun isValid(line: String) = line.isNotEmpty() && (line.length < 12 || line.length == 13) && line.all { it in '0'..'9' }
 
     private fun reasonFor(line: String) = when {
         line.isEmpty() -> "línea vacía"
         line.any { it !in '0'..'9' } -> "contiene caracteres que no son dígitos"
-        else -> "debe tener exactamente 13 dígitos, tiene ${line.length}"
+        else -> "debe tener 13 dígitos (o menos de 12), tiene ${line.length}"
     }
 
     companion object {

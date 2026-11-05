@@ -14,6 +14,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.afede.kidago.data.ArchiveReason
 import com.afede.kidago.data.SyncState
 import com.afede.kidago.ui.catalog.CatalogStatusStrip
+import com.afede.kidago.ui.components.ConfirmationHost
 import com.afede.kidago.ui.products.ProductosListViewModel
 import com.afede.kidago.ui.products.ProductosScreen
 import com.afede.kidago.ui.scan.EscanearScreen
@@ -42,6 +43,7 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             KidaGoTheme {
+                ConfirmationHost(container.exportPrompt)
                 val sync by container.catalogSync.state.collectAsState()
                 val products: ProductosListViewModel = viewModel(factory = viewModelFactory {
                     initializer { ProductosListViewModel(container.todaysList.entries, container.todaysList.total, container.todaysList::remove) }

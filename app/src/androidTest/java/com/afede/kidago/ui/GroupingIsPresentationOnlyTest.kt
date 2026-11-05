@@ -55,7 +55,7 @@ class GroupingIsPresentationOnlyTest {
         db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDatabase::class.java).build()
         list = TodaysListEntryStore(db)
         file = File(rule.activity.cacheDir, "scanned-list-${System.nanoTime()}.txt")
-        val mirror = ListFileMirror({ file }, list.entries, { true }, { list.archiveAndClear(ArchiveReason.EXPORT) }).also { it.start(scope) }
+        val mirror = ListFileMirror({ file }, list.entries, { true }, { }).also { it.start(scope) }
         runBlocking { mirror.onLaunchOrResume() }
         rule.setContent {
             KidaGoTheme {

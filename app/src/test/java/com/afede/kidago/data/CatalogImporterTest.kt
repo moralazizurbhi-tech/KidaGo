@@ -30,6 +30,11 @@ class CatalogImporterTest {
     }
 
     @Test
+    fun shortLinesAreImportedAsIs() = runTest {
+        assertEquals(ImportResult.Success(2), importer.import(file("4444\n1234567890123\n")))
+    }
+
+    @Test
     fun badLinesDiscardEverythingAndNeverCommit() = runTest {
         val result = importer.import(file("1234567890123\n123456789012\n12345678901234\n12345678901ab\n\n9876543210987\n"))
         result as ImportResult.Failure

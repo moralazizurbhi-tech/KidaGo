@@ -67,14 +67,13 @@ class CaptureInputTest {
         assertEquals(listOf<ScanResult>(ScanResult.Code("0000000000123")), captures)
     }
 
-    // C3: fewer than 13 is not submittable; stays Typing and keeps what was typed
+    // C3: a short code is submitted as typed (never padded); an empty entry is not submittable
     @Test
-    fun shortEntryIsNotSubmittedAndIsNotPadded() {
+    fun shortEntryIsSubmittedAsTypedAndIsNotPadded() {
         val manual = ManualEntryInput { captures += it }
         manual.onChange("123")
-        assertFalse(manual.submit())
-        assertTrue(captures.isEmpty())
-        assertEquals("123", manual.value.value)
+        assertTrue(manual.submit())
+        assertEquals(listOf<ScanResult>(ScanResult.Code("123")), captures)
         assertFalse(ManualEntryInput { captures += it }.submit()) // empty
     }
 }

@@ -50,10 +50,10 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 // Strip copy (FEAT-001 UX/UI). Diagnostic wording is a provisional proposal: the UX leaves it an open asset decision.
-private const val NO_CATALOG_TEXT = "No hay datos en el catálogo. Conecte el dispositivo al ordenador y pulse Importar en el programa."
+private const val NO_CATALOG_TEXT = "No hay datos en el catálogo. Conecte el dispositivo al ordenador y pulse Actualizar PDA en el programa."
 private const val NO_ACCESS_TEXT = "Falta el permiso de archivos - toca para concederlo"
 private const val ERROR_TEXT = "Error al sincronizar - toca para ver detalles"
-private const val ERROR_WARNING = "Puede que tengas que volver a hacer Importar."
+private const val ERROR_WARNING = "Puede que tengas que volver a pulsar Actualizar PDA."
 
 private enum class StripIcon { Dot, Spinner, Error, Lock, NoCatalog }
 

@@ -19,7 +19,7 @@ class ListFileMirrorTest {
     private var access = true
     private var exports = 0
     private val dir get() = tmp.root.resolve("afede/kidago")
-    private val file get() = dir.resolve("scanned-list.txt")
+    private val file get() = dir.resolve("DATOS.txt")
 
     private fun set(vararg e: Pair<String, Int>) { list.value = e.mapIndexed { i, (c, q) -> ListEntry(i + 1L, c, q) } }
 
@@ -27,22 +27,22 @@ class ListFileMirrorTest {
         file = { file },
         entries = list,
         hasAccess = { access },
-        archiveForExport = { exports++; list.value = emptyList(); true },
+        onExportDetected = { exports++ },
     ).also { it.start(backgroundScope) }
 
     @Test
     fun fileEqualsTheListInInsertionOrderAfterEveryChange() = runTest {
         val m = mirror(); set("A" to 1); m.onLaunchOrResume(); runCurrent()
-        assertEquals("A,1\n", file.readText())
+        assertEquals("A,1\r\n", file.readText())
         set("A" to 1, "B" to 2); runCurrent()
-        assertEquals("A,1\nB,2\n", file.readText())
+        assertEquals("A,1\r\nB,2\r\n", file.readText())
         set("A" to 3, "B" to 2); runCurrent() // accumulate or typed quantity
-        assertEquals("A,3\nB,2\n", file.readText())
+        assertEquals("A,3\r\nB,2\r\n", file.readText())
         set("B" to 2); runCurrent() // removal
-        assertEquals("B,2\n", file.readText())
+        assertEquals("B,2\r\n", file.readText())
         set(); runCurrent() // clear
         assertEquals("", file.readText())
-        assertEquals(listOf("scanned-list.txt"), dir.list()!!.toList()) // no temp file left behind
+        assertEquals(listOf("DATOS.txt"), dir.list()!!.toList()) // no temp file left behind
     }
 
     @Test
@@ -52,13 +52,15 @@ class ListFileMirrorTest {
     }
 
     @Test
-    fun anEmptyFileWhileTheListHasEntriesIsAnExportResetAndTheFileStaysEmpty() = runTest {
+    fun anEmptyFileWhileTheListHasEntriesIsReportedOnceAndTheListIsKept() = runTest {
         dir.mkdirs(); file.writeText("")
         set("A" to 2)
         val m = mirror(); m.onLaunchOrResume(); runCurrent()
         assertEquals(1, exports)
-        assertEquals(emptyList<ListEntry>(), list.value)
-        assertEquals("", file.readText()) // the mirror did not overwrite the cleared file with the old list
+        assertEquals(1, list.value.size) // only the user's answer empties the list
+        assertEquals("A,2\r\n", file.readText()) // the file is refilled, so the same export is not reported again
+        m.onLaunchOrResume(); runCurrent()
+        assertEquals(1, exports)
     }
 
     @Test
@@ -66,7 +68,7 @@ class ListFileMirrorTest {
         set("A" to 2)
         val m = mirror(); m.onLaunchOrResume(); runCurrent()
         assertEquals(0, exports)
-        assertEquals("A,2\n", file.readText())
+        assertEquals("A,2\r\n", file.readText())
     }
 
     @Test
@@ -90,7 +92,7 @@ class ListFileMirrorTest {
         access = true
         file.writeText("old,9\n")
         m.onLaunchOrResume(); runCurrent()
-        assertEquals("A,1\nB,1\n", file.readText())
+        assertEquals("A,1\r\nB,1\r\n", file.readText())
     }
 
     @Test
@@ -102,8 +104,8 @@ class ListFileMirrorTest {
         file.writeText("") // the desktop tool empties it
         m.checkForExport(); runCurrent()
         assertEquals(1, exports)
-        assertEquals(emptyList<ListEntry>(), list.value)
-        assertEquals("", file.readText())
+        assertEquals(1, list.value.size)
+        assertEquals("A,2\r\n", file.readText())
     }
 
     @Test
