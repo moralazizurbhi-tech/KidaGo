@@ -10,8 +10,11 @@ import com.afede.kidago.data.Settings
 import kotlin.math.PI
 import kotlin.math.sin
 
-/** What the user feels or hears for an outcome. Patterns follow FEAT-002 UI Definition, "Outcome cues". */
-enum class Cue { Found, NotFound, Error }
+/**
+ * What the user feels or hears for an outcome. Patterns follow FEAT-002 UI Definition, "Outcome cues": three sounds in
+ * all, one for a scan added (Found), one for a price shown (PriceFound, FEAT-006) and one for Not Found and Error.
+ */
+enum class Cue { Found, PriceFound, NotFound, Error }
 
 /** The two output channels, kept apart so each can be governed by its own setting. */
 interface OutcomeCues {
@@ -53,7 +56,7 @@ class AndroidOutcomeCues(context: Context) : OutcomeCues {
     override fun vibrate(cue: Cue) {
         // Timings alternate off/on from an initial pause; Found is the light one.
         val (timings, amplitude) = when (cue) {
-            Cue.Found -> longArrayOf(0, 50) to 100
+            Cue.Found, Cue.PriceFound -> longArrayOf(0, 50) to 100
             Cue.NotFound -> longArrayOf(0, 60, 80, 60) to 255
             Cue.Error -> longArrayOf(0, 400) to 255
         }
@@ -62,11 +65,12 @@ class AndroidOutcomeCues(context: Context) : OutcomeCues {
     }
 
     override fun beep(cue: Cue) {
-        // (frequency Hz, duration ms); 0 Hz is a pause. High short beep, lower beep, low double tone.
+        // (frequency Hz, duration ms); 0 Hz is a pause. A scan added: one high short beep. A price shown: two rising
+        // notes, so the user hears which tab is listening. Not Found and Error: the same low double tone.
         val tones = when (cue) {
             Cue.Found -> listOf(1200 to 100)
-            Cue.NotFound -> listOf(700 to 150)
-            Cue.Error -> listOf(350 to 150, 0 to 80, 350 to 150)
+            Cue.PriceFound -> listOf(880 to 90, 0 to 30, 1320 to 140)
+            Cue.NotFound, Cue.Error -> listOf(350 to 150, 0 to 80, 350 to 150)
         }
         val pcm = ShortArray(tones.sumOf { (_, ms) -> ms * SAMPLE_RATE / 1000 })
         var at = 0
