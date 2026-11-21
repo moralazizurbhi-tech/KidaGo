@@ -1,7 +1,7 @@
 package com.afede.kidago.ui.scan
 
 import androidx.activity.ComponentActivity
-import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -38,10 +38,13 @@ class EscanearLayoutTest {
     private val found = CaptureState.Found("8412345678905", 1, false)
     private val notFound = CaptureState.NotFound("8412345678905")
 
+    private fun assertClearance(lowest: Float) =
+        assertTrue("lowest element ends ${b("tab-bar").top.value - lowest} px above the tab bar", lowest <= b("tab-bar").top.value - 16f)
+
     private fun assertHeroAndClearance(lowest: Float) {
         val hero = b("scan-hero")
         near(229f, hero.width.value, "hero width"); near(102f, hero.height.value, "hero height")
-        assertTrue("lowest element ends ${b("tab-bar").top.value - lowest} px above the tab bar", lowest <= b("tab-bar").top.value - 16f)
+        assertClearance(lowest)
     }
 
     @Test
@@ -50,6 +53,7 @@ class EscanearLayoutTest {
         near(416f, b("scan-input").width.value, "field width"); near(64f, b("scan-input").height.value, "field height")
         near(32f, b("scan-input").left.value, "left margin")
         near(32f, b("scan-input").top.value - b("scan-hero").bottom.value, "hero to field")
+        rule.onNodeWithTag("screen-label").assertDoesNotExist() // the label belongs to results only
         assertHeroAndClearance(b("scan-input").bottom.value)
     }
 
@@ -59,47 +63,47 @@ class EscanearLayoutTest {
         assertHeroAndClearance(bText("Buscando producto...").bottom.value)
     }
 
+    /** Redesign 2026-11-21: no illustration; label on the right, card at 416, action row 12 px apart. */
+    private fun assertResultStack() {
+        rule.onNodeWithTag("scan-hero").assertDoesNotExist()
+        near(right, b("screen-label").right.value, "label on the right margin")
+        near(40f, b("screen-label").height.value, "label height")
+        val card = rule.onNodeWithTag("result-code").getUnclippedBoundsInRoot()
+        assertTrue("label above the card", b("screen-label").bottom.value < card.top.value)
+    }
+
     @Test
-    fun foundStacksWithTheReferenceGapsAndFits() {
+    fun foundStacksLabelCardAndActionsAndFits() {
         show(found)
-        near(2f, b("scan-input").top.value - b("scan-hero").bottom.value, "hero to code")
-        near(32f, b("scan-badge").top.value - b("scan-input").bottom.value, "code to badge")
-        val heading = bText("Producto encontrado"); val sub = bText("Añadido a la lista")
-        near(12f, heading.top.value - b("scan-badge").bottom.value, "badge to heading")
-        near(12f, sub.top.value - heading.bottom.value, "heading to subtext")
-        val label = bText("Cantidad")
-        near(12f, label.top.value - sub.bottom.value, "subtext to action row")
-        near(27f, label.height.value, "label height"); near(6f, b("scan-cantidad").top.value - label.bottom.value, "label to field")
-        near(340f, b("scan-cantidad").width.value, "Cantidad width"); near(64f, b("scan-cantidad").height.value, "Cantidad height")
+        assertResultStack()
+        near(64f, b("scan-cantidad").height.value, "Cantidad height")
         val listo = b("scan-listo")
-        near(64f, listo.width.value, "Listo width"); near(64f, listo.height.value, "Listo height")
+        near(64f, listo.height.value, "Listo height")
         near(12f, listo.left.value - b("scan-cantidad").right.value, "Cantidad to Listo")
         near(b("scan-cantidad").bottom.value, listo.bottom.value, "Listo aligned to the field")
         near(right, listo.right.value, "Listo on the margin")
-        assertHeroAndClearance(listo.bottom.value)
+        assertClearance(listo.bottom.value)
     }
 
     @Test
-    fun notFoundHasListoAloneOnTheRightMargin() {
+    fun notFoundHasListoAtFullWidth() {
         show(notFound)
-        val sub = bText("Comprueba el código o inténtalo de nuevo")
-        near(12f, b("scan-listo").top.value - sub.bottom.value, "subtext to Listo")
-        near(right, b("scan-listo").right.value, "Listo on the margin")
-        near(64f, b("scan-listo").width.value, "Listo width")
-        assertHeroAndClearance(b("scan-listo").bottom.value)
+        assertResultStack()
+        near(416f, b("scan-listo").width.value, "Listo width")
+        assertClearance(b("scan-listo").bottom.value)
     }
 
     @Test
-    fun errorGoesFromTheIllustrationToTheBadgeIn32AndFits() {
+    fun errorHasNoCodeRowAndFits() {
         show(CaptureState.Error)
-        near(32f, b("scan-badge").top.value - b("scan-hero").bottom.value, "illustration to badge")
+        rule.onNodeWithTag("result-code").assertDoesNotExist()
         near(right, b("scan-listo").right.value, "Listo on the margin")
-        assertHeroAndClearance(b("scan-listo").bottom.value)
+        assertClearance(b("scan-listo").bottom.value)
     }
 
     @Test
-    fun listoIsNamedForAssistiveTechnology() {
+    fun listoIsLabelled() {
         show(notFound)
-        rule.onNodeWithTag("scan-listo").assertContentDescriptionEquals("Listo")
+        rule.onNodeWithText("Listo").assertIsDisplayed()
     }
 }

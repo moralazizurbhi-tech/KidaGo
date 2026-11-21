@@ -33,7 +33,9 @@ class AppContainer(
     val scanner: BarcodeScanner = EastaeonBarcodeScanner(context.applicationContext),
 ) {
     val database: AppDatabase =
-        Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "kidago.db").build()
+        Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "kidago.db")
+            .addMigrations(AppDatabase.MIGRATION_1_2)
+            .build()
     val fileAccess = FileAccessGuard.forContext(context)
     val settings = SettingsStore(context)
     val keyboardProbe = PhysicalKeyboardProbe.forContext(context)
@@ -48,7 +50,7 @@ class AppContainer(
         hasCatalog = catalog::hasCatalog,
     )
     val outcomeFeedback = OutcomeFeedbackTrigger({ settings.settings.value }, AndroidOutcomeCues(context))
-    val catalogQuery = CatalogQueryFacade(catalogSync.state, catalog::contains)
+    val catalogQuery = CatalogQueryFacade(catalogSync.state, catalog::find)
 
     /** Outlives any activity: a sync must not be cancelled because the screen was rotated or closed. */
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

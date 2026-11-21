@@ -1,12 +1,17 @@
 package com.afede.kidago.ui.shell
 
 import androidx.annotation.DrawableRes
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -15,9 +20,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBars
@@ -29,19 +32,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Matrix
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -59,20 +51,21 @@ import com.afede.kidago.ui.theme.KidaGoShapes
 import com.afede.kidago.ui.theme.KidaGoSpacing
 import com.afede.kidago.ui.theme.KidaGoWordmark
 
-/** The three destinations of Project Architecture's Navigation Compose graph. */
+/** The destinations of the Navigation Compose graph: three tabs and Ajustes (FEAT-006 C7). */
 enum class Destination(val route: String, val label: String) {
     Scan("scan", "Escanear"),
     Products("products", "Productos"),
+    Price("price", "Precio"),
     Settings("settings", "Ajustes"),
 }
 
-private class Tab(val destination: Destination, @DrawableRes val icon: Int, val iconWidth: Int, val iconHeight: Int)
+private class Tab(val destination: Destination, @DrawableRes val icon: Int, val iconSize: Dp)
 
-// Figma order: Productos on the left, Escanear on the right. Sizes are the Figma icon frames (dp);
-// the teddy bear is cropped to its visible 53 rows.
+// Figma order: Productos, Escanear, Precio. Productos is the dog face (the app's mascot), Precio the euro sign.
 private val tabs = listOf(
-    Tab(Destination.Products, R.drawable.ic_tab_products, 83, 53),
-    Tab(Destination.Scan, R.drawable.ic_tab_scan, 70, 70),
+    Tab(Destination.Products, R.drawable.ic_tab_products, 40.dp),
+    Tab(Destination.Scan, R.drawable.ic_tab_scan, 40.dp),
+    Tab(Destination.Price, R.drawable.ic_euro, 38.dp),
 )
 
 /**
@@ -87,6 +80,7 @@ fun AppShell(
     headerContent: @Composable () -> Unit = {},
     scanScreen: @Composable () -> Unit = { PlaceholderScreen(Destination.Scan) },
     productsScreen: @Composable () -> Unit = { PlaceholderScreen(Destination.Products) },
+    priceScreen: @Composable () -> Unit = { PlaceholderScreen(Destination.Price) },
     settingsScreen: @Composable () -> Unit = { PlaceholderScreen(Destination.Settings) },
 ) {
     val current by navController.currentBackStackEntryAsState()
@@ -104,6 +98,7 @@ fun AppShell(
             NavHost(navController, startDestination = Destination.Scan.route) {
                 composable(Destination.Scan.route) { scanScreen() }
                 composable(Destination.Products.route) { productsScreen() }
+                composable(Destination.Price.route) { priceScreen() }
                 composable(Destination.Settings.route) { settingsScreen() }
             }
         }
@@ -142,40 +137,26 @@ private fun Header(onSettings: () -> Unit, content: @Composable () -> Unit) {
     }
 }
 
-// Figma frame: 480 x 800 design px (1 dp = 1 design px, see DesignPixels). The bar silhouette is 506 x 157; its
-// visible part is 132 high (it starts at y=668) and the rest runs off the bottom edge.
-private const val FIGMA_WIDTH = 480f
-private val TabBarHeight = 132.dp
+// Bottom bar (FEAT-006 UI Definition, validated 2026-11-21): a floating white pill with three equal tabs; the active
+// tab's icon rises into a white bubble with the brand's pink gradient. Design px (1 dp = 1 design px, see DesignPixels).
+private val BubbleRise = 36.dp // the bar starts this far below the top; the active bubble starts at the top
+private val BarHeight = 96.dp
+private val BarShape = RoundedCornerShape(40.dp)
 private val GestureInset = 24.dp
-private const val SVG_X = 21f // the exported SVG is 522 wide, centred on the 480 frame
-private const val SVG_Y = 4f
 
 @Composable
 private fun TabBar(route: String?, productsBadge: Int, onSelect: (Destination) -> Unit) {
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val barPath = remember { PathParser().parsePathString(TAB_BAR_PATH).toPath() }
-    // The Figma bar height already includes the gesture-bar area; only a taller (3-button) inset adds height.
-    BoxWithConstraints(Modifier.fillMaxWidth().height(TabBarHeight + (bottomInset - GestureInset).coerceAtLeast(0.dp)).clipToBounds().testTag("tab-bar")) {
-        Canvas(Modifier.fillMaxSize()) {
-            val s = size.width / FIGMA_WIDTH
-            val shape = Path().apply {
-                addPath(barPath)
-                transform(Matrix().apply { translate(-SVG_X * s, -SVG_Y * s); scale(s, s) })
-            }
-            // The two soft Figma drop shadows (0 2 3 @15%, 0 1 1 @30%).
-            drawIntoCanvas { canvas ->
-                for ((blur, dy, alpha) in listOf(Triple(6f, 2f, .15f), Triple(2f, 1f, .30f))) {
-                    val paint = Paint().apply {
-                        color = KidaGoColors.Surface
-                        asFrameworkPaint().setShadowLayer(blur * s, 0f, dy * s, Color.Black.copy(alpha = alpha).toArgb())
-                    }
-                    canvas.drawPath(shape, paint)
-                }
-            }
-            // Below the lobes the bar is solid, whatever the inset height.
-            drawRect(KidaGoColors.Surface, topLeft = Offset(0f, 100f * s), size = Size(size.width, size.height))
-        }
-        Row(Modifier.fillMaxSize()) {
+    // The design already leaves room for the gesture bar; only a taller (3-button) inset adds height.
+    val extra = (bottomInset - GestureInset).coerceAtLeast(0.dp)
+    Box(Modifier.fillMaxWidth().height(BubbleRise + BarHeight + 6.dp + extra).testTag("tab-bar")) {
+        Box(
+            Modifier.padding(start = 16.dp, end = 16.dp, top = BubbleRise).fillMaxWidth().height(BarHeight)
+                .shadow(10.dp, BarShape)
+                .background(KidaGoColors.Surface, BarShape)
+                .border(1.dp, KidaGoColors.Text.copy(alpha = 0.08f), BarShape),
+        )
+        Row(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(BubbleRise + BarHeight)) {
             tabs.forEach { tab ->
                 TabItem(
                     tab = tab,
@@ -192,32 +173,29 @@ private fun TabBar(route: String?, productsBadge: Int, onSelect: (Destination) -
 private fun TabItem(tab: Tab, selected: Boolean, badge: Int, modifier: Modifier, onClick: () -> Unit) {
     val color = if (selected) KidaGoColors.Accent else KidaGoColors.Text
     Box(modifier.fillMaxSize().selectable(selected, role = Role.Tab, onClick = onClick)) {
-        if (selected) {
-            // Soft red glow under the active tab.
-            Image(
-                painterResource(R.drawable.tab_active_blob),
-                contentDescription = null,
-                Modifier.align(Alignment.TopCenter).offset(y = 70.dp).requiredSize(251.dp, 150.dp),
-            )
-        }
-        Column(Modifier.align(Alignment.TopCenter), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(Modifier.padding(top = 20.dp).height(70.dp), contentAlignment = Alignment.TopCenter) {
-                BadgedBox(badge = { if (badge > 0) CountPill(badge) }) {
-                    Icon(
-                        painterResource(tab.icon),
-                        contentDescription = null,
-                        tint = color,
-                        modifier = Modifier.requiredSize(tab.iconWidth.dp, tab.iconHeight.dp).offset(y = if (tab.iconHeight < 70) 5.dp else 0.dp),
-                    )
-                }
+        val icon: @Composable () -> Unit = {
+            BadgedBox(badge = { if (badge > 0) CountPill(badge) }) {
+                Icon(painterResource(tab.icon), contentDescription = null, tint = color, modifier = Modifier.size(tab.iconSize))
             }
-            Text(
-                tab.destination.label,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                color = color,
-            )
         }
+        if (selected) {
+            // The raised bubble: white with the bar's shadow, holding the pink gradient circle and the red icon.
+            Box(Modifier.align(Alignment.TopCenter).size(76.dp).shadow(10.dp, CircleShape).background(KidaGoColors.Surface, CircleShape), contentAlignment = Alignment.Center) {
+                Box(
+                    Modifier.size(64.dp).background(Brush.verticalGradient(listOf(KidaGoColors.Accent.copy(alpha = 0.05f), KidaGoColors.Accent.copy(alpha = 0.22f))), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) { icon() }
+            }
+        } else {
+            Box(Modifier.align(Alignment.TopCenter).padding(top = BubbleRise + 12.dp)) { icon() }
+        }
+        Text(
+            tab.destination.label,
+            style = MaterialTheme.typography.labelMedium.copy(fontSize = 14.sp),
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            color = color,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = BubbleRise + 60.dp),
+        )
     }
 }
 

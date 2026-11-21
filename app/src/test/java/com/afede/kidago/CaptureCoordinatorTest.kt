@@ -35,7 +35,7 @@ class CaptureCoordinatorTest {
         lookup = { code ->
             looked += code
             gates[code]?.await()
-            if (code in catalog) LookupResult.Found else LookupResult.NotFound
+            if (code in catalog) LookupResult.Found() else LookupResult.NotFound
         },
         entries = list,
         addOrAccumulate = { code ->

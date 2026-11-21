@@ -37,7 +37,7 @@ class CatalogSyncDeviceTest {
             catalogFolder = { folder },
             hasCatalog = store::hasCatalog,
         )
-        query = CatalogQueryFacade(sync.state, store::contains)
+        query = CatalogQueryFacade(sync.state, store::find)
     }
 
     @After
@@ -60,7 +60,7 @@ class CatalogSyncDeviceTest {
         sync.onDetectionOpportunity()
 
         assertTrue(sync.state.value is SyncState.UpToDate && (sync.state.value as SyncState.UpToDate).completedAt != null)
-        assertEquals(LookupResult.Found, query.lookup("3333333333333")) // C11: newest file's records
+        assertEquals(LookupResult.Found(), query.lookup("3333333333333")) // C11: newest file's records
         assertEquals(LookupResult.NotFound, query.lookup("1111111111111")) // older file never imported
         assertEquals(listOf("notes.txt"), folder.list()!!.toList()) // C12: catalog files gone, others untouched
 
@@ -70,13 +70,13 @@ class CatalogSyncDeviceTest {
         val error = sync.state.value as SyncState.Error // C5, C6
         assertEquals(2, error.diagnostics.single().lineNumber)
         assertTrue(File(folder, "product-catalog-2026-03-01.txt").exists()) // C13: nothing deleted
-        assertEquals(LookupResult.Found, query.lookup("3333333333333")) // previous catalog intact
+        assertEquals(LookupResult.Found(), query.lookup("3333333333333")) // previous catalog intact
         assertEquals(LookupResult.NotFound, query.lookup("5555555555555"))
 
         write("product-catalog-2026-03-01.txt", "5555555555555") // C8: re-sent file, retried automatically
         sync.onDetectionOpportunity()
         assertTrue(sync.state.value is SyncState.UpToDate)
-        assertEquals(LookupResult.Found, query.lookup("5555555555555"))
+        assertEquals(LookupResult.Found(), query.lookup("5555555555555"))
         assertEquals(LookupResult.NotFound, query.lookup("3333333333333")) // C2: full replace
         assertFalse(File(folder, "product-catalog-2026-03-01.txt").exists())
     }
@@ -88,7 +88,7 @@ class CatalogSyncDeviceTest {
         File(folder, "product-catalog-2026-04-01.txt").writeText(lines.joinToString("\n"))
         sync.onDetectionOpportunity()
         assertTrue(sync.state.value is SyncState.UpToDate)
-        assertEquals(LookupResult.Found, query.lookup(lines.last()))
+        assertEquals(LookupResult.Found(), query.lookup(lines.last()))
         assertEquals(LookupResult.NotFound, query.lookup("9999999999999"))
     }
 }

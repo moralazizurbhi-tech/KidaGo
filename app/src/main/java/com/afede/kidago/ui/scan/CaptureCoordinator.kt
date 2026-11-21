@@ -22,7 +22,7 @@ sealed interface CaptureState {
     data object Typing : CaptureState
     data object Searching : CaptureState
     /** [occurrence] tells one Found from the next even when the rest is equal, so the screen can reset "Cantidad" on each. */
-    data class Found(val code: String, val quantity: Int, val wasExisting: Boolean, val occurrence: Int = 0) : CaptureState
+    data class Found(val code: String, val quantity: Int, val wasExisting: Boolean, val occurrence: Int = 0, val priceCents: Long? = null) : CaptureState
     data class NotFound(val code: String) : CaptureState
     data object Error : CaptureState
 }
@@ -110,15 +110,15 @@ class CaptureCoordinator(
     }
 
     private suspend fun resolve(code: String) {
-        when (lookup(code)) {
+        when (val result = lookup(code)) {
             LookupResult.NotFound -> outcome(CaptureState.NotFound(code))
             LookupResult.Unavailable -> _state.value = CaptureState.Idle // a sync began after capture was accepted
-            LookupResult.Found -> {
+            is LookupResult.Found -> {
                 // Once the lookup matched, the scan is counted even if a newer capture supersedes it right now.
                 val added = withContext(NonCancellable) { addOrAccumulate(code) }
                 currentCoroutineContext().ensureActive()
                 latest = Scan(code, added.quantityBefore, added.wasExisting)
-                outcome(CaptureState.Found(code, added.quantityAfter, added.wasExisting, ++occurrences))
+                outcome(CaptureState.Found(code, added.quantityAfter, added.wasExisting, ++occurrences, result.priceCents))
             }
         }
     }

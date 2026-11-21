@@ -58,7 +58,7 @@ class CrossScreenIntegrationTest {
                 val escanear: EscanearViewModel = viewModel {
                     EscanearViewModel(
                         scanner, sync,
-                        { if (it in known) LookupResult.Found else LookupResult.NotFound },
+                        { if (it in known) LookupResult.Found() else LookupResult.NotFound },
                         list.entries, list::addOrAccumulate, list::applyQuantity,
                     )
                 }

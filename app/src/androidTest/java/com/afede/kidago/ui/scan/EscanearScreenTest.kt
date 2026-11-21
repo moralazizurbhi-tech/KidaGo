@@ -64,7 +64,7 @@ class EscanearScreenTest {
             val vm = viewModel {
                 EscanearViewModel(
                     scanner, sync,
-                    { if (it == known) LookupResult.Found else LookupResult.NotFound },
+                    { if (it == known) LookupResult.Found() else LookupResult.NotFound },
                     list.entries, list::addOrAccumulate, list::applyQuantity,
                 )
             }
@@ -215,20 +215,33 @@ class EscanearScreenTest {
     // ---- the composition of the Figma frames
 
     @Test
-    fun theHeroBarcodeIsInEveryState() {
+    fun theHeroBarcodeIsOnlyInTheScreenBase() {
         var state by mutableStateOf<CaptureState>(CaptureState.Idle)
         rule.setContent { KidaGoTheme { EscanearScreen(state, "", {}, {}, {}) } }
-        for (s in listOf(CaptureState.Idle, CaptureState.Searching, CaptureState.Found(known, 1, false), CaptureState.NotFound(unknown), CaptureState.Error)) {
+        for (s in listOf(CaptureState.Idle, CaptureState.Searching)) {
             state = s; rule.waitForIdle()
             rule.onNodeWithTag("scan-hero").assertIsDisplayed()
+        }
+        for (s in listOf(CaptureState.Found(known, 1, false), CaptureState.NotFound(unknown), CaptureState.Error)) {
+            state = s; rule.waitForIdle()
+            rule.onNodeWithTag("scan-hero").assertDoesNotExist()
         }
     }
 
     @Test
-    fun foundAndNotFoundEchoTheCodeGroupedInPlaceOfThePill() {
+    fun foundAndNotFoundShowTheCodeGroupedInTheCard() {
         showState(CaptureState.Found(known, 1, wasExisting = false))
         rule.onNodeWithText("1 111111 111111").assertIsDisplayed()
         rule.onNodeWithText("Introduce o escanea un código").assertDoesNotExist()
+    }
+
+    @Test
+    fun foundShowsThePriceOrSinPrecio() {
+        var state by mutableStateOf<CaptureState>(CaptureState.Found(known, 1, wasExisting = false, priceCents = 2499))
+        rule.setContent { KidaGoTheme { EscanearScreen(state, "", {}, {}, {}) } }
+        rule.onNodeWithText("24,99 €").assertIsDisplayed()
+        state = CaptureState.Found(known, 1, wasExisting = false, occurrence = 1); rule.waitForIdle()
+        rule.onNodeWithText("Sin precio").assertIsDisplayed()
     }
 
     @Test

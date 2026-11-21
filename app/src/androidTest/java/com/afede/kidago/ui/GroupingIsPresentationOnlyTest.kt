@@ -62,7 +62,7 @@ class GroupingIsPresentationOnlyTest {
                 val products: ProductosListViewModel = viewModel { ProductosListViewModel(list.entries, list.total, list::remove) }
                 val productos by products.state.collectAsState()
                 val escanear: EscanearViewModel = viewModel {
-                    EscanearViewModel(scanner, sync, { LookupResult.Found }, list.entries, list::addOrAccumulate, list::applyQuantity)
+                    EscanearViewModel(scanner, sync, { LookupResult.Found() }, list.entries, list::addOrAccumulate, list::applyQuantity)
                 }
                 val state by escanear.state.collectAsState()
                 val typed by escanear.typed.collectAsState()
