@@ -52,9 +52,9 @@ class AjustesLayoutTest {
     }
 
     @Test
-    fun allFiveRowsAreVisibleWithAtLeast16pxAboveTheTabBar() {
+    fun allSixRowsAreVisibleWithAtLeast16pxAboveTheTabBar() {
         show()
-        listOf("ajustes-sound", "ajustes-vibration", "ajustes-folder", "ajustes-version", "ajustes-clear").forEach { rule.onNodeWithTag(it).assertIsDisplayed() }
+        listOf("ajustes-sound", "ajustes-vibration", "ajustes-folder", "ajustes-usb", "ajustes-version", "ajustes-clear").forEach { rule.onNodeWithTag(it).assertIsDisplayed() }
         val bottom = b("ajustes-clear").bottom.value
         assertTrue("last row ends ${b("tab-bar").top.value - bottom} px above the tab bar", bottom <= b("tab-bar").top.value - 16f)
     }

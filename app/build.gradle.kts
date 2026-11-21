@@ -14,8 +14,8 @@ android {
         applicationId = "com.afede.kidago"
         minSdk = 33 // Project Architecture: Android 13 is the minimum platform
         targetSdk = 37
-        versionCode = 6
-        versionName = "1.0.1.2"
+        versionCode = 7
+        versionName = "1.1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
