@@ -35,7 +35,11 @@ class EscanearViewModel(
         viewModelScope.launch { coordinator.state.collect { if (it is CaptureState.Found) manual.clear() } }
     }
 
+    /** The Escanear screen is shown and resumed (or not): captures are accepted only then (C21). */
+    fun setScreenActive(active: Boolean) = coordinator.setScreenActive(active)
+
     fun onTyped(text: String) {
+        if (state.value is CaptureState.NotFound || state.value == CaptureState.Error) return // read-only until "Listo" (C22)
         manual.onChange(text)
         coordinator.onTyping(manual.value.value.isNotEmpty())
     }

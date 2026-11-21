@@ -309,9 +309,29 @@ class EscanearScreenTest {
         scan(unknown)
         rule.onNodeWithText("Producto no encontrado").assertIsDisplayed()
         rule.onNodeWithTag("scan-outcome-found").assertDoesNotExist()
+        rule.onNodeWithTag("scan-listo").performClick(); rule.waitForIdle() // Not Found is not superseded (C22)
         scanner.emit(ScanResult.Failure); rule.waitForIdle()
         rule.onNodeWithText("Error de lectura").assertIsDisplayed()
         rule.onNodeWithTag("scan-outcome-notfound").assertDoesNotExist()
+    }
+
+    @Test
+    fun notFoundAndErrorRefuseScansAndTypingUntilListo() {
+        showViewModelScreen()
+        scan(unknown)
+        scan(known)
+        rule.onNodeWithText("Producto no encontrado").assertIsDisplayed()
+        assertEquals(null, quantity(known))
+        rule.onNodeWithTag("scan-input").performTextInput("5")
+        assertEmpty("scan-input")
+        rule.onNodeWithTag("scan-listo").performClick(); rule.waitForIdle()
+        scanner.emit(ScanResult.Failure); rule.waitForIdle()
+        scan(known)
+        rule.onNodeWithText("Error de lectura").assertIsDisplayed()
+        assertEquals(null, quantity(known))
+        rule.onNodeWithTag("scan-listo").performClick(); rule.waitForIdle()
+        scan(known)
+        rule.waitUntil(3_000) { quantity(known) == 1 }
     }
 
     @Test
@@ -340,14 +360,14 @@ class EscanearScreenTest {
     }
 
     @Test
-    fun cantidadRejectsZeroAndKeepsTheDefault() {
+    fun cantidadZeroRemovesTheNewLine() {
         showViewModelScreen()
         scan(known)
         rule.waitUntil(3_000) { quantity(known) == 1 }
         rule.onNodeWithTag("scan-cantidad").performTextInput("0")
         rule.onNodeWithTag("scan-cantidad").performImeAction()
         rule.waitUntil(3_000) { rule.onAllNodesWithTag("scan-cantidad").fetchSemanticsNodes().isEmpty() } // back to Idle
-        assertEquals(1, quantity(known))
+        assertEquals(null, quantity(known)) // C23: the scan is cancelled, the line it created goes
     }
 
     @Test

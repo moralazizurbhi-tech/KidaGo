@@ -45,7 +45,7 @@ class CaptureCoordinatorTest {
         },
         applyQuantity = { code, before, n ->
             val exists = qty(code) != null
-            if (exists) list.value = list.value.map { if (it.code == code) it.copy(quantity = before + n) else it }
+            if (exists) list.value = if (before + n == 0) list.value.filter { it.code != code } else list.value.map { if (it.code == code) it.copy(quantity = before + n) else it }
             exists
         },
     )
@@ -117,16 +117,45 @@ class CaptureCoordinatorTest {
     }
 
     @Test
-    fun newCaptureSupersedesAShowingOutcomeWithNoDismissStep() = runTest {
+    fun newCaptureSupersedesAShowingFoundWithNoDismissStep() = runTest {
         gates["B"] = CompletableDeferred()
         val c = coordinator()
         c.onCapture(code("A")); runCurrent()
         c.onCapture(code("B")); runCurrent()
         assertEquals(CaptureState.Searching, c.state.value)
+    }
+
+    @Test
+    fun notFoundAndErrorRefuseCapturesUntilListo() = runTest {
+        val c = coordinator()
+        c.onCapture(code("Z")); runCurrent()
+        looked.clear()
+        c.onCapture(code("A")); c.onCapture(ScanResult.Failure); runCurrent()
+        assertEquals(CaptureState.NotFound("Z"), c.state.value)
+        assertEquals(emptyList<String>(), looked)
+        assertEquals(null, qty("A"))
+        c.finishScan(); runCurrent()
         c.onCapture(ScanResult.Failure); runCurrent()
         assertEquals(CaptureState.Error, c.state.value)
-        c.onCapture(code("Z")); runCurrent()
-        assertEquals(CaptureState.NotFound("Z"), c.state.value)
+        c.onCapture(code("A")); runCurrent()
+        assertEquals(CaptureState.Error, c.state.value)
+        assertEquals(null, qty("A"))
+        c.finishScan(); runCurrent()
+        c.onCapture(code("A")); runCurrent()
+        assertEquals(CaptureState.Found("A", 1, false), c.state.value.noOccurrence())
+    }
+
+    @Test
+    fun captureIsDroppedWhileTheScreenIsNotShown() = runTest {
+        val c = coordinator()
+        c.setScreenActive(false)
+        c.onCapture(code("A")); c.onCapture(ScanResult.Failure); runCurrent()
+        assertEquals(CaptureState.Idle, c.state.value)
+        assertEquals(emptyList<String>(), looked)
+        assertEquals(null, qty("A"))
+        c.setScreenActive(true)
+        c.onCapture(code("A")); runCurrent()
+        assertEquals(1, qty("A"))
     }
 
     @Test
@@ -177,7 +206,7 @@ class CaptureCoordinatorTest {
         assertEquals(CaptureState.Typing, c.state.value)
         c.onTyping(false)
         c.onCapture(code("A")); runCurrent()
-        c.finishScan("0"); runCurrent()
+        c.finishScan("100"); runCurrent()
         assertEquals(4, qty("A"))
         assertEquals(CaptureState.Idle, c.state.value)
     }
@@ -200,10 +229,10 @@ class CaptureCoordinatorTest {
     }
 
     @Test
-    fun cantidadOutsideOneTo99OrNotAWholeNumberKeepsTheDefault() = runTest {
+    fun cantidadOutsideZeroTo99OrNotAWholeNumberKeepsTheDefault() = runTest {
         val c = coordinator()
         c.onCapture(code("A")); runCurrent()
-        for (bad in listOf("0", "100", "abc", "", "-3", "+5", "1.5", " ")) c.onQuantitySubmit(bad)
+        for (bad in listOf("100", "abc", "", "-3", "+5", "1.5", " ")) c.onQuantitySubmit(bad)
         runCurrent()
         assertEquals(1, qty("A"))
         assertEquals(CaptureState.Found("A", 1, false), c.state.value.noOccurrence())
@@ -247,6 +276,7 @@ class CaptureCoordinatorTest {
         c.onCapture(code("A")); runCurrent()
         c.onQuantitySubmit("3"); runCurrent()
         c.onCapture(code("Z")); runCurrent()
+        c.finishScan()
         c.onCapture(ScanResult.Failure)
         assertEquals(listOf(CaptureState.Found("A", 1, false), CaptureState.NotFound("Z"), CaptureState.Error), outcomes.map { it.noOccurrence() })
     }
@@ -281,16 +311,16 @@ class CaptureCoordinatorTest {
         list.value = listOf(entry("A", 3))
         val c = coordinator()
         c.onCapture(code("A")); runCurrent()
-        for (bad in listOf("0", "100", "")) {
+        for (bad in listOf("100", "")) {
             c.onQuantityEdit(bad)
             c.onCapture(code("A")); runCurrent()
         }
-        assertEquals(7, qty("A")) // four scans, +1 each
+        assertEquals(6, qty("A")) // two more scans, +1 each
         c.onQuantityEdit("5")
-        c.onCapture(code("Z")); runCurrent() // applied once, to the entry behind that Found
-        assertEquals(11, qty("A"))
-        c.onCapture(code("Z")); runCurrent()
-        assertEquals(11, qty("A")) // not applied a second time, nor carried over
+        c.onCapture(code("B")); runCurrent() // applied once, to the entry behind that Found
+        assertEquals(10, qty("A")) // 5 before the last scan + 5
+        c.onCapture(code("B")); runCurrent()
+        assertEquals(10, qty("A")) // not applied a second time, nor carried over
     }
 
     @Test
@@ -312,5 +342,37 @@ class CaptureCoordinatorTest {
         val first = (c.state.value as CaptureState.Found).occurrence
         c.onCapture(code("A")); runCurrent()
         assertEquals(first + 1, (c.state.value as CaptureState.Found).occurrence)
+    }
+
+    @Test
+    fun cantidadZeroOnANewItemRemovesTheLineAndReturnsToIdle() = runTest {
+        val c = coordinator()
+        c.onCapture(code("A")); runCurrent()
+        c.finishScan("0"); runCurrent()
+        assertEquals(null, qty("A"))
+        assertEquals(CaptureState.Idle, c.state.value)
+
+        c.onCapture(code("B")); runCurrent()
+        c.onQuantitySubmit("0"); runCurrent() // Enter path
+        assertEquals(null, qty("B"))
+    }
+
+    @Test
+    fun cantidadZeroOnARescanKeepsThePreviousTotal() = runTest {
+        list.value = listOf(entry("A", 3))
+        val c = coordinator()
+        c.onCapture(code("A")); runCurrent() // 3 -> 4
+        c.onQuantitySubmit("0"); runCurrent()
+        assertEquals(3, qty("A"))
+    }
+
+    @Test
+    fun aPendingZeroIsAppliedWhenANewCaptureSupersedes() = runTest {
+        val c = coordinator()
+        c.onCapture(code("A")); runCurrent()
+        c.onQuantityEdit("0")
+        c.onCapture(code("B")); runCurrent()
+        assertEquals(null, qty("A"))
+        assertEquals(1, qty("B"))
     }
 }

@@ -80,8 +80,15 @@ class CaptureCoordinator(
         if (latest != null) pending = text
     }
 
+    /** Set by the Escanear screen while it is shown and resumed; a capture on any other screen, or in the background, is dropped (C21). */
+    private var screenActive = true
+
+    fun setScreenActive(active: Boolean) { screenActive = active }
+
     fun onCapture(capture: ScanResult) {
-        if (syncState.value is SyncState.Syncing) return
+        if (syncState.value is SyncState.Syncing || !screenActive) return
+        // Not Found and Error stay until "Listo" (C22); only Found is superseded by a new capture (C9).
+        if (_state.value is CaptureState.NotFound || _state.value == CaptureState.Error) return
         val previous = inFlight
         previous?.cancel()
         val superseded = latest
@@ -158,6 +165,7 @@ class CaptureCoordinator(
         }
     }
 
+    /** 0..99; 0 cancels this scan's contribution (C23). */
     private fun validQuantity(text: String) =
-        text.takeIf { it.isNotEmpty() && it.all { c -> c in '0'..'9' } }?.toIntOrNull()?.takeIf { it in 1..99 }
+        text.takeIf { it.isNotEmpty() && it.all { c -> c in '0'..'9' } }?.toIntOrNull()?.takeIf { it in 0..99 }
 }
