@@ -16,6 +16,8 @@ import com.afede.kidago.ui.components.ConfirmationRequest
 import com.afede.kidago.data.LocalCatalogStore
 import com.afede.kidago.data.SettingsStore
 import com.afede.kidago.data.TodaysListEntryStore
+import com.afede.kidago.data.AndroidUsbMonitor
+import com.afede.kidago.data.UsbConnectionLog
 import com.afede.kidago.scanner.BarcodeScanner
 import com.afede.kidago.scanner.EastaeonBarcodeScanner
 import com.afede.kidago.scanner.ForegroundOnlyScanner
@@ -47,6 +49,8 @@ class AppContainer(
     val fileAccess = FileAccessGuard.forContext(context)
     val settings = SettingsStore(context)
     val keyboardProbe = PhysicalKeyboardProbe.forContext(context)
+    val usbLog = UsbConnectionLog()
+    val usbMonitor = AndroidUsbMonitor(context.applicationContext, usbLog).also { it.start() } // from launch, so the log has a history (FEAT-004 C15)
     val catalog = LocalCatalogStore(database)
     val todaysList = TodaysListEntryStore(database)
     val catalogSync = CatalogSyncCoordinator(

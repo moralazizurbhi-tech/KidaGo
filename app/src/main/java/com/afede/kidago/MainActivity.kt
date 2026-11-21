@@ -5,6 +5,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import com.afede.kidago.ui.settings.UsbHelpScreen
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -94,7 +98,14 @@ class MainActivity : ComponentActivity() {
                     priceScreen = { PrecioScreen(priceState, priceTyped, precio::onTyped, precio::onSubmit, precio::onBack, syncing = sync is SyncState.Syncing, physicalKeyboard = physicalKeyboard, onScreenActive = precio::setScreenActive) },
                     productsScreen = { ProductosScreen(productos, products.confirmation, products.removal::onLongPress, removalState = products.removal.state.collectAsState().value) },
                     settingsScreen = {
-                        AjustesScreen(ajustesState, ajustes::onSoundToggle, ajustes::onVibrationToggle, ajustes::onFolderSubmit, ajustes.confirmation, ajustes.clear::onClearTapped, physicalKeyboard = physicalKeyboard)
+                        // "Conexión USB" is an inner screen of Ajustes, not a destination: leaving Ajustes closes it too.
+                        var usbHelp by rememberSaveable { mutableStateOf(false) }
+                        if (usbHelp) {
+                            val usb by container.usbLog.snapshot.collectAsState()
+                            UsbHelpScreen(usb, onSave = { container.usbMonitor.save(appVersion()) }, onBack = { usbHelp = false })
+                        } else {
+                            AjustesScreen(ajustesState, ajustes::onSoundToggle, ajustes::onVibrationToggle, ajustes::onFolderSubmit, ajustes.confirmation, ajustes.clear::onClearTapped, physicalKeyboard = physicalKeyboard, onUsbHelp = { usbHelp = true })
+                        }
                     },
                 )
             }

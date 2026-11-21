@@ -16,6 +16,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.HorizontalDivider
@@ -44,7 +45,7 @@ import com.afede.kidago.ui.theme.KidaGoSwitch
 import com.afede.kidago.ui.theme.KidaGoTextField
 
 /**
- * Ajustes (FEAT-004 UX/UI): Sonido and Vibrar toggles, "Ruta del catálogo", Acerca de, and the manual-clear entry
+ * Ajustes (FEAT-004 UX/UI): Sonido and Vibrar toggles, "Ruta del catálogo", "Conexión USB", Acerca de, and the manual-clear entry
  * point last and visually secondary, with its confirmation prompt hosted here.
  */
 @Composable
@@ -58,6 +59,8 @@ fun AjustesScreen(
     modifier: Modifier = Modifier,
     /** The device has a physical keyboard with digits (PhysicalKeyboardProbe): the folder field opens no on-screen keyboard. */
     physicalKeyboard: Boolean = true,
+    /** Opens the inner "Conexión USB" screen (C14). */
+    onUsbHelp: () -> Unit = {},
 ) {
     NoSoftKeyboard(physicalKeyboard) { Column(modifier.fillMaxSize().testTag("screen-settings").verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = KidaGoSpacing.Gap)) {
         // Fit (FEAT-004 UI Definition): 8 px between rows and 16 px of top padding, so the five rows clear the tab bar by 16 px.
@@ -71,6 +74,8 @@ fun AjustesScreen(
             ToggleRow("Vibrar", "Utilizar alertas de vibración al escanear", state.vibrationEnabled, "ajustes-vibration", onVibrationToggle)
             HorizontalDivider(color = KidaGoColors.Border)
             FolderRow(state.catalogFolder, onFolderSubmit)
+            HorizontalDivider(color = KidaGoColors.Border)
+            UsbRow(onUsbHelp)
             HorizontalDivider(color = KidaGoColors.Border)
             AboutRow(state.version)
             Spacer(Modifier.height(8.dp))
@@ -110,6 +115,15 @@ private fun FolderRow(saved: String, onSubmit: (String) -> Boolean) {
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { if (!onSubmit(draft)) draft = saved }),
         )
+    }
+}
+
+/** Entry to the inner "Conexión USB" screen: a single label line and a chevron, so the six rows still fit (UI Definition, Fit). */
+@Composable
+private fun UsbRow(onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).testTag("ajustes-usb"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+        Column(Modifier.weight(1f).padding(end = KidaGoSpacing.Gap)) { RowLabel("Conexión USB", null) }
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = KidaGoColors.Text, modifier = Modifier.size(28.dp))
     }
 }
 
