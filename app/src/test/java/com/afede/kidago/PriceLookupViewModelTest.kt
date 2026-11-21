@@ -44,9 +44,25 @@ class PriceLookupViewModelTest {
         assertEquals(PriceState.Found("8410000000016", null), vm.state.value) // C3: replaces at once
         scanner.emit(ScanResult.Code("1"))
         assertEquals(PriceState.NotFound("1"), vm.state.value)
+        vm.onBack()
         scanner.emit(ScanResult.Failure)
         assertEquals(PriceState.Error, vm.state.value)
         assertEquals(4, outcomes.size)
+    }
+
+    @Test
+    fun notFoundAndErrorTakeNoNewCaptureUntilVolver() {
+        vm.setScreenActive(true)
+        scanner.emit(ScanResult.Code("1"))
+        scanner.emit(ScanResult.Code("8410000000009"))
+        vm.onTyped("8410000000009")
+        vm.onSubmit()
+        assertEquals(PriceState.NotFound("1"), vm.state.value) // C9
+        vm.onBack()
+        scanner.emit(ScanResult.Failure)
+        scanner.emit(ScanResult.Code("8410000000009"))
+        assertEquals(PriceState.Error, vm.state.value)
+        assertEquals(2, outcomes.size)
     }
 
     @Test

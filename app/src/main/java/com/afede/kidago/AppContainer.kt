@@ -18,20 +18,28 @@ import com.afede.kidago.data.SettingsStore
 import com.afede.kidago.data.TodaysListEntryStore
 import com.afede.kidago.scanner.BarcodeScanner
 import com.afede.kidago.scanner.EastaeonBarcodeScanner
+import com.afede.kidago.scanner.ForegroundOnlyScanner
 import com.afede.kidago.ui.scan.AndroidOutcomeCues
 import com.afede.kidago.ui.PhysicalKeyboardProbe
 import com.afede.kidago.ui.scan.OutcomeFeedbackTrigger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
 
 /** Manual dependency injection: the single place that picks implementations. */
 class AppContainer(
     context: Context,
-    val scanner: BarcodeScanner = EastaeonBarcodeScanner(context.applicationContext),
+    scanner: BarcodeScanner = EastaeonBarcodeScanner(context.applicationContext),
 ) {
+    /** True while the activity is resumed; set by [MainActivity]. */
+    val foreground = MutableStateFlow(false)
+
+    /** The hardware scanner, heard only while the app is in the foreground (FEAT-002 C21). */
+    val scanner: BarcodeScanner = ForegroundOnlyScanner(scanner, foreground)
+
     val database: AppDatabase =
         Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "kidago.db")
             .addMigrations(AppDatabase.MIGRATION_1_2)

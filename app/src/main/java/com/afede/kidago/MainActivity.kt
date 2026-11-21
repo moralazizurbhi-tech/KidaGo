@@ -74,7 +74,7 @@ class MainActivity : ComponentActivity() {
                         with(container) {
                             PriceLookupViewModel(scanner, catalogSync.state, catalogQuery::lookup) {
                                 when (it) {
-                                    is PriceState.Found -> outcomeFeedback.onCue(Cue.Found)
+                                    is PriceState.Found -> outcomeFeedback.onCue(Cue.PriceFound)
                                     is PriceState.NotFound -> outcomeFeedback.onCue(Cue.NotFound)
                                     PriceState.Error -> outcomeFeedback.onCue(Cue.Error)
                                     else -> Unit
@@ -106,9 +106,15 @@ class MainActivity : ComponentActivity() {
     // onResume runs at launch and at every return to the foreground: the catalog detection opportunities (FEAT-001 C1, C17).
     override fun onResume() {
         super.onResume()
+        container.foreground.value = true // the scanner is heard again (FEAT-002 C21)
         container.keyboardProbe.refresh() // input devices may have changed while away (FEAT-002 PhysicalKeyboardProbe)
         container.appScope.launch { container.catalogSync.onDetectionOpportunity() }
         container.appScope.launch { container.listMirror.onLaunchOrResume() } // export-reset detection, then mirroring (FEAT-002 C13, C14, C19)
+    }
+
+    override fun onPause() {
+        container.foreground.value = false // stop hearing the scanner: a background scan never reaches the app
+        super.onPause()
     }
 
     private companion object {
