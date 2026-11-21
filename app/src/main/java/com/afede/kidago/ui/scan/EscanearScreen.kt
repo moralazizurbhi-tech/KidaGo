@@ -73,6 +73,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -129,7 +130,14 @@ fun EscanearScreen(
     onQuantityEdit: (String) -> Unit = {},
     /** The device has a physical keyboard with digits (PhysicalKeyboardProbe): no field opens the on-screen keyboard. */
     physicalKeyboard: Boolean = true,
+    /** Tells the capture side whether this screen is shown and resumed: captures are accepted only then (C21). */
+    onScreenActive: (Boolean) -> Unit = {},
 ) {
+    // Leaving the tab disposes this screen; going to the background pauses it. Either way captures stop.
+    LifecycleResumeEffect(Unit) {
+        onScreenActive(true)
+        onPauseOrDispose { onScreenActive(false) }
+    }
     if (syncing) {
         SyncingSurface(modifier)
         return

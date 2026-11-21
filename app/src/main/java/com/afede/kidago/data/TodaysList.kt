@@ -110,10 +110,13 @@ class TodaysListEntryStore(
 
     /**
      * Cantidad: set the line to quantityBefore + n (replaces the scan's +1, so resubmitting replaces, never adds).
-     * The 1..99 range is validated by CaptureCoordinator. Returns false if the line no longer exists.
+     * The 0..99 range is validated by CaptureCoordinator. A total of 0 (a new item whose Cantidad is 0) removes the
+     * line (C23). Returns false if the line no longer exists.
      */
-    suspend fun applyQuantity(code: String, quantityBefore: Int, n: Int): Boolean =
-        dao.setQuantity(code, quantityBefore + n) > 0
+    suspend fun applyQuantity(code: String, quantityBefore: Int, n: Int): Boolean = db.withTransaction {
+        if (quantityBefore + n > 0) dao.setQuantity(code, quantityBefore + n) > 0
+        else (dao.find(code) != null).also { if (it) dao.delete(code) }
+    }
 
     suspend fun remove(code: String) = dao.delete(code)
 
