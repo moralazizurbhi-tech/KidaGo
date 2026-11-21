@@ -8,14 +8,14 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.withTransaction
 
-/** One catalog record. Barcode only in this version; the primary key makes lookups indexed. */
+/** One catalog record: the barcode and, when the file gives one, its price in cents (FEAT-001 C24). */
 @Entity(tableName = "catalog_item")
-data class CatalogItem(@PrimaryKey val barcode: String)
+data class CatalogItem(@PrimaryKey val barcode: String, val priceCents: Long? = null)
 
 @Dao
 interface CatalogDao {
-    @Query("SELECT EXISTS(SELECT 1 FROM catalog_item WHERE barcode = :barcode)")
-    suspend fun contains(barcode: String): Boolean
+    @Query("SELECT * FROM catalog_item WHERE barcode = :barcode")
+    suspend fun find(barcode: String): CatalogItem?
 
     @Query("SELECT EXISTS(SELECT 1 FROM catalog_item)")
     suspend fun hasAny(): Boolean
@@ -23,7 +23,7 @@ interface CatalogDao {
     @Query("DELETE FROM catalog_item")
     suspend fun deleteAll()
 
-    // IGNORE: a repeated barcode in a file is harmless for a barcode-only catalog.
+    // IGNORE: a code repeated in a file keeps its first record, price included (C26).
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(items: List<CatalogItem>)
 }
@@ -32,19 +32,19 @@ interface CatalogDao {
 class LocalCatalogStore(private val db: AppDatabase) {
     private val dao = db.catalogDao()
 
-    /** Found / not found against the current catalog, barcode matched exactly. */
-    suspend fun contains(barcode: String): Boolean = dao.contains(barcode)
+    /** The record for [barcode], matched exactly, or null when it is not in the current catalog. */
+    suspend fun find(barcode: String): CatalogItem? = dao.find(barcode)
 
     /** True once a catalog has been imported; an empty import never succeeds, so empty means none (C22). */
     suspend fun hasCatalog(): Boolean = dao.hasAny()
 
     /**
-     * Atomic full replace: readers see the old catalog or the new one, never a mix. If [barcodes] throws
+     * Atomic full replace: readers see the old catalog or the new one, never a mix. If [items] throws
      * part-way, the transaction rolls back and the previous catalog stays.
      */
-    suspend fun replaceAll(barcodes: Iterable<String>) = db.withTransaction {
+    suspend fun replaceAll(items: Iterable<CatalogItem>) = db.withTransaction {
         dao.deleteAll()
-        barcodes.chunked(INSERT_CHUNK).forEach { chunk -> dao.insertAll(chunk.map(::CatalogItem)) }
+        items.chunked(INSERT_CHUNK).forEach { dao.insertAll(it) }
     }
 
     private companion object {

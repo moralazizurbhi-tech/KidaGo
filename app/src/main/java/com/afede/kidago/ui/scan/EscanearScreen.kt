@@ -1,5 +1,6 @@
 package com.afede.kidago.ui.scan
 
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -100,19 +101,16 @@ private val HeroWidth = 229.dp
 private val HeroHeight = 102.dp
 
 private val SideMargin = 32.dp
-private val BlockGap = 12.dp // between badge, heading, subtext and the action row
-private val IllustrationGap = 32.dp // illustration (with its echoed code) to the outcome badge, and hero to the input pill
-private val EchoGap = 2.dp // hero to the echoed code (Found, Not Found)
-private val EchoHeight = 32.dp
-private val ErrorGap = IllustrationGap - 1.dp // Error shows no code: the 1 px unseen focus holder completes the 32 px
+private val BlockGap = 12.dp // between the label, the result card and the action row
+private val IllustrationGap = 32.dp // hero to the input pill (screen base only)
 private val FieldHeight = 64.dp
-private val ListoSize = 64.dp
 
 /**
- * Escanear's scanning surface (FEAT-002 UX/UI, Figma "Diseño final"): the hero barcode, then one text field that keeps
- * keyboard focus in every state. It is a white pill in Idle, Typing and Searching and, once an outcome shows, the
- * code itself in large bold type (a scan's code is echoed there). Below it sit the outcome block and, for Found only,
- * the "Cantidad" input. Enter submits both fields; there is no on-screen submit control.
+ * Escanear's scanning surface (FEAT-002 UX/UI; redesign validated 2026-11-21, Figma «Precio (propuesta v3)»). The base
+ * (Idle, Typing, Searching) is the hero barcode and the white pill field. A result (Found, Not Found, Error) drops the
+ * hero and shows the "Escanear" label, the result card (code as a label, price for Found) and its action row: "Cantidad"
+ * and "Listo" for Found, "Listo" alone otherwise. The field stays composed in a result as an unseen focus holder.
+ * Enter submits both fields; there is no on-screen submit control.
  */
 @Composable
 fun EscanearScreen(
@@ -146,10 +144,6 @@ fun EscanearScreen(
     // Found hands the focus to "Cantidad" so a quantity can be typed right after a scan; every other state keeps it on the input.
     LaunchedEffect(state is CaptureState.Found) { if (state !is CaptureState.Found) focus.requestFocus() }
     val outcome = state is CaptureState.Found || state is CaptureState.NotFound || state == CaptureState.Error
-    val gap by animateDpAsState(
-        when { state is CaptureState.Found || state is CaptureState.NotFound -> EchoGap; state == CaptureState.Error -> ErrorGap; else -> IllustrationGap },
-        tween(220), label = "hero-gap",
-    )
     // The group sits in the middle of the area between the status strip and the tab bar, as in the frames.
     NoSoftKeyboard(physicalKeyboard) { Box(modifier.fillMaxSize().testTag("screen-scan"), contentAlignment = Alignment.Center) {
         // Nothing scrolls: every state fits above the tab bar with at least 16 px to spare (UX, Fit).
@@ -157,13 +151,15 @@ fun EscanearScreen(
             Modifier.padding(horizontal = SideMargin, vertical = KidaGoSpacing.Gap),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            HeroBarcode(dimmed = state == CaptureState.Error)
-            Spacer(Modifier.height(gap))
+            // The illustration belongs to the screen base only; a result shows the code inside its card (redesign 2026-11-21).
+            if (!outcome) {
+                HeroBarcode()
+                Spacer(Modifier.height(IllustrationGap))
+            }
+            // In a result the field stays composed as an unseen focus holder, so the focus rules do not change.
             CodeField(
                 pill = !outcome,
-                hidden = state == CaptureState.Error && typed.isEmpty(),
                 typed = typed,
-                echo = (state as? CaptureState.Found)?.code ?: (state as? CaptureState.NotFound)?.code,
                 onTyped = onTyped,
                 onSubmit = onSubmit,
                 focus = focus,
@@ -186,13 +182,12 @@ fun EscanearScreen(
  * mascot with the updating message fills the area. When the sync ends the screen composes again and focuses the field.
  */
 @Composable
-private fun SyncingSurface(modifier: Modifier) {
+internal fun SyncingSurface(modifier: Modifier) {
     Box(modifier.fillMaxSize().testTag("screen-scan"), contentAlignment = Alignment.Center) {
         Column(Modifier.padding(horizontal = 20.dp).testTag("scan-disabled"), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
-            // The project's mascot outline, reused unchanged from the shared empty state.
-            // 83x83 frame (FEAT-001 UI Definition); the artwork keeps its 83x53 visible rows, centred in it.
+            // The project's mascot outline (the dog face), reused unchanged from the shared empty state.
             Box(Modifier.size(83.dp).testTag("scan-mascot"), contentAlignment = Alignment.Center) {
-                Image(painterResource(R.drawable.ic_tab_products), contentDescription = null, modifier = Modifier.size(width = 83.dp, height = 53.dp))
+                Image(painterResource(R.drawable.ic_tab_products), contentDescription = null, modifier = Modifier.size(72.dp))
             }
             Text(
                 "La base de datos se está actualizando. Esto puede tardar unos minutos.",
@@ -206,13 +201,13 @@ private fun SyncingSurface(modifier: Modifier) {
 }
 
 @Composable
-private fun HeroBarcode(dimmed: Boolean) {
+internal fun HeroBarcode() {
     val density = LocalDensity.current
     Box(Modifier.size(HeroWidth, HeroHeight).testTag("scan-hero"), contentAlignment = Alignment.Center) {
         Text(
             HERO_TEXT,
-            // Fixed size, like the artwork: it must not follow the user's font scale. The Error variant is the same artwork at half strength.
-            style = TextStyle(fontFamily = BarcodeFont, fontSize = with(density) { HeroFontSize.toSp() }, letterSpacing = with(density) { HeroLetterSpacing.toSp() }, color = if (dimmed) KidaGoColors.Text.copy(alpha = 0.5f) else KidaGoColors.Text),
+            // Fixed size, like the artwork: it must not follow the user's font scale.
+            style = TextStyle(fontFamily = BarcodeFont, fontSize = with(density) { HeroFontSize.toSp() }, letterSpacing = with(density) { HeroLetterSpacing.toSp() }, color = KidaGoColors.Text),
             maxLines = 1,
             softWrap = false,
             // The font draws the bars inside the line box, which is taller than the bars; centre the bars in the hero box.
@@ -221,15 +216,9 @@ private fun HeroBarcode(dimmed: Boolean) {
     }
 }
 
-private class CodeDisplay(private val echo: String?) : VisualTransformation {
+/** Shows the typed digits grouped 1-6-6 (display only). Shared with Consultar precio's field. */
+internal object CodeDisplay : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
-        if (text.isEmpty() && echo != null) {
-            // Nothing typed (a hardware scan, or the field was freed after Found): show the captured code instead.
-            return TransformedText(AnnotatedString(groupedBarcode(echo)), object : OffsetMapping {
-                override fun originalToTransformed(offset: Int) = 0
-                override fun transformedToOriginal(offset: Int) = 0
-            })
-        }
         val shown = groupedBarcode(text.text)
         return TransformedText(AnnotatedString(shown), object : OffsetMapping {
             override fun originalToTransformed(offset: Int) = when { offset <= 1 -> offset; offset <= 7 -> offset + 1; else -> offset + 2 }.coerceAtMost(shown.length)
@@ -239,14 +228,14 @@ private class CodeDisplay(private val echo: String?) : VisualTransformation {
 }
 
 @Composable
-private fun CodeField(
+internal fun CodeField(
     pill: Boolean,
-    hidden: Boolean,
     typed: String,
-    echo: String?,
     onTyped: (String) -> Unit,
     onSubmit: () -> Unit,
     focus: FocusRequester,
+    placeholder: String = "Introduce o escanea un código",
+    @DrawableRes icon: Int = R.drawable.ic_scan_field,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -264,7 +253,7 @@ private fun CodeField(
         cursorBrush = SolidColor(KidaGoColors.Accent),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { onSubmit() }),
-        visualTransformation = CodeDisplay(echo),
+        visualTransformation = CodeDisplay,
         interactionSource = interaction,
         decorationBox = { field ->
             if (pill) {
@@ -277,16 +266,16 @@ private fun CodeField(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    Image(painterResource(R.drawable.ic_scan_field), contentDescription = null, modifier = Modifier.size(32.dp))
+                    Image(painterResource(icon), contentDescription = null, modifier = Modifier.size(32.dp))
                     Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                        if (typed.isEmpty()) Text("Introduce o escanea un código", style = style.copy(letterSpacing = 0.sp, fontSize = 20.sp, lineHeight = 28.sp), color = KidaGoColors.TextMuted)
+                        if (typed.isEmpty()) Text(placeholder, style = style.copy(letterSpacing = 0.sp, fontSize = 20.sp, lineHeight = 28.sp), color = KidaGoColors.TextMuted)
                         field()
                     }
                     if (typed.isNotEmpty()) ClearButton { onTyped("") }
                 }
             } else {
-                // The outcome shows the code itself, with no pill. When there is nothing to show (Error) it keeps focus unseen.
-                Box(Modifier.fillMaxWidth().height(if (hidden) 1.dp else EchoHeight), contentAlignment = Alignment.Center) { field() }
+                // A result shows its code in the card; the field keeps focus unseen.
+                Box(Modifier.fillMaxWidth().height(1.dp), contentAlignment = Alignment.Center) { field() }
             }
         },
     )
@@ -308,108 +297,51 @@ private fun Outcome(state: CaptureState, onQuantitySubmit: (String) -> Unit, onF
         }
         is CaptureState.Found -> {
             var draft by remember(state.occurrence) { mutableStateOf("") } // one per Found, so a Found after a Found starts empty
-            Block(
-            tag = "scan-outcome-found",
-            badge = { CircleBadge(KidaGoColors.SuccessIcon) { Icon(Icons.Filled.Check, null, tint = KidaGoColors.Surface, modifier = Modifier.size(32.dp)) } },
-            heading = "Producto encontrado",
-            headingColor = KidaGoColors.SuccessText,
-            subtext = { if (state.wasExisting) RescanWarning(state.quantity) else Subtext("Añadido a la lista") },
-            extra = { FoundActions(draft, state.occurrence, { draft = it; onQuantityEdit(it) }) { onFinish(draft) } },
-            )
+            Result("scan-outcome-found") {
+                ResultCard(
+                    ResultKind.Found, "Producto encontrado", "Añadido a la lista",
+                    code = state.code, showPrice = true, priceCents = state.priceCents,
+                    subtitleContent = if (state.wasExisting) ({ RescanWarning(state.quantity) }) else null,
+                )
+                FoundActions(draft, state.occurrence, { draft = it; onQuantityEdit(it) }) { onFinish(draft) }
+            }
         }
-        is CaptureState.NotFound -> Block(
-            tag = "scan-outcome-notfound",
-            badge = { CircleBadge(KidaGoColors.TextMuted) { Exclamation(KidaGoColors.Surface) } },
-            heading = "Producto no encontrado",
-            subtext = { Subtext("Comprueba el código o inténtalo de nuevo") },
-            extra = { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { ListoButton { onFinish("") } } },
-        )
-        CaptureState.Error -> Block(
-            tag = "scan-outcome-error",
-            topGap = 0.dp,
-            badge = { TriangleBadge() },
-            heading = "Error de lectura",
-            subtext = { Subtext("No se ha podido leer el código Inténtalo de nuevo") },
-            extra = { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { ListoButton { onFinish("") } } },
-        )
+        is CaptureState.NotFound -> Result("scan-outcome-notfound") {
+            ResultCard(ResultKind.NotFound, "Producto no encontrado", "Comprueba el código o inténtalo de nuevo", code = state.code)
+            ListoPill(Modifier.fillMaxWidth()) { onFinish("") }
+        }
+        CaptureState.Error -> Result("scan-outcome-error") {
+            ResultCard(ResultKind.Error, "Error de lectura", "No se ha podido leer el código. Inténtalo de nuevo")
+            ListoPill(Modifier.fillMaxWidth()) { onFinish("") }
+        }
         CaptureState.Idle, CaptureState.Typing -> Unit // the input alone carries these states
     }
 }
 
+/** A result: the "Escanear" label on the right, then the card and its action row. */
 @Composable
-private fun Block(
-    tag: String,
-    badge: @Composable () -> Unit,
-    heading: String,
-    subtext: @Composable () -> Unit,
-    headingColor: Color = KidaGoColors.Text,
-    topGap: Dp = IllustrationGap,
-    extra: @Composable () -> Unit = {},
-) {
-    Column(Modifier.fillMaxWidth().padding(top = topGap).testTag(tag), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(BlockGap)) {
-        badge()
-        Text(heading, style = MaterialTheme.typography.titleLarge, color = headingColor, textAlign = TextAlign.Center)
-        subtext()
-        extra()
+private fun Result(tag: String, content: @Composable () -> Unit) {
+    Column(Modifier.fillMaxWidth().testTag(tag), verticalArrangement = Arrangement.spacedBy(BlockGap)) {
+        ScreenLabel("Escanear", R.drawable.ic_scan_field, red = false, modifier = Modifier.align(Alignment.End))
+        content()
     }
-}
-
-@Composable
-private fun CircleBadge(color: Color, content: @Composable () -> Unit) {
-    Box(Modifier.size(54.dp).background(color, CircleShape).testTag("scan-badge"), contentAlignment = Alignment.Center) { content() }
-}
-
-/** The plain white "!" the Not Found and Error badges carry (a bar over a dot). */
-@Composable
-private fun Exclamation(tint: Color, modifier: Modifier = Modifier) {
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-        Box(Modifier.size(width = 4.dp, height = 15.dp).background(tint, RoundedCornerShape(2.dp)))
-        Box(Modifier.size(4.dp).background(tint, CircleShape))
-    }
-}
-
-/** The Error badge: a red triangle with rounded corners, deliberately not a circle (about 52 x 46 as rendered). */
-@Composable
-private fun TriangleBadge() {
-    Box(Modifier.size(width = 52.dp, height = 46.dp).testTag("scan-badge"), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.fillMaxSize()) {
-            val r = 5.dp.toPx() // corner radius
-            val a = Offset(size.width / 2f, 0f); val b = Offset(size.width, size.height); val c = Offset(0f, size.height)
-            // A rounded triangle is a smaller triangle (inset by r) drawn with a round-joined stroke 2r wide.
-            val la = (b - c).getDistance(); val lb = (a - c).getDistance(); val lc = (a - b).getDistance()
-            val centre = Offset((la * a.x + lb * b.x + lc * c.x) / (la + lb + lc), (la * a.y + lb * b.y + lc * c.y) / (la + lb + lc))
-            val area = size.width * size.height / 2f
-            val inradius = area / ((la + lb + lc) / 2f)
-            val k = (inradius - r) / inradius
-            fun inset(p: Offset) = centre + (p - centre) * k
-            val path = Path().apply { moveTo(inset(a).x, inset(a).y); lineTo(inset(b).x, inset(b).y); lineTo(inset(c).x, inset(c).y); close() }
-            drawPath(path, KidaGoColors.Accent, style = Fill)
-            drawPath(path, KidaGoColors.Accent, style = Stroke(width = 2 * r, join = StrokeJoin.Round))
-        }
-        Exclamation(KidaGoColors.Surface, Modifier.offset(y = 4.dp))
-    }
-}
-
-@Composable
-private fun Subtext(text: String) {
-    Text(text, style = MaterialTheme.typography.labelLarge, color = KidaGoColors.Text, textAlign = TextAlign.Center, modifier = Modifier.widthIn(max = 205.dp))
 }
 
 /** Rescan: alert icon plus text, so the warning never relies on colour (C5). */
 @Composable
 private fun RescanWarning(total: Int) {
-    Row(Modifier.testTag("scan-rescan"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(Modifier.testTag("scan-rescan"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Icon(painterResource(R.drawable.ic_alert_circle), contentDescription = null, tint = KidaGoColors.Text, modifier = Modifier.size(20.dp))
-        Text("Ya escaneado · Total acumulado: $total", style = MaterialTheme.typography.labelLarge, color = KidaGoColors.Text)
+        Text("Ya escaneado · Total acumulado: $total", style = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.Bold, fontSize = 17.sp, lineHeight = 24.sp), color = KidaGoColors.Text)
     }
 }
 
-/** Found's action row: "Cantidad" (340 wide) with "Listo" 12 px to its right, aligned to the field (416 in all). */
+/** Found's action row: "Cantidad" filling the row, with "Listo" 12 px to its right, aligned to the field. */
 @Composable
 private fun FoundActions(draft: String, occurrence: Int, onDraft: (String) -> Unit, onFinish: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(BlockGap)) {
         Cantidad(draft, occurrence, onDraft, onFinish, Modifier.weight(1f))
-        ListoButton(onFinish)
+        ListoPill(onClick = onFinish)
     }
 }
 
@@ -434,24 +366,8 @@ private fun Cantidad(draft: String, occurrence: Int, onDraft: (String) -> Unit, 
     }
 }
 
-/**
- * "Listo" (FEAT-002 UI): a 64x64 circular icon-only control, named "Listo" for assistive technology, in the input's
- * border and surface; pressed, it takes the accent at about 6%.
- */
+/** "Listo" (C20): the labelled pill that finishes the scan; "Listo" is also its accessible name. */
 @Composable
-private fun ListoButton(onClick: () -> Unit) {
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val fill = if (pressed) KidaGoColors.Accent.copy(alpha = 0.06f).compositeOver(KidaGoColors.Surface) else KidaGoColors.Surface
-    Box(
-        Modifier.size(ListoSize)
-            .background(fill, CircleShape)
-            .border(1.dp, KidaGoColors.Border, CircleShape)
-            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = "Listo" }
-            .testTag("scan-listo"),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(painterResource(R.drawable.ic_return), contentDescription = null, tint = KidaGoColors.Text, modifier = Modifier.size(24.dp))
-    }
+private fun ListoPill(modifier: Modifier = Modifier, onClick: () -> Unit) {
+    ActionPill("Listo", checkPainter(), onClick, modifier.testTag("scan-listo"))
 }

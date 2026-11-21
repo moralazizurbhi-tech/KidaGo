@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:autoMirrored="true">
+    <!-- Left arrow for "Volver" in Consultar precio (FEAT-006 UI Definition). Tinted by the caller. -->
+    <path
+        android:pathData="M19,12H5m0,0 l6,-6m-6,6 l6,6"
+        android:strokeWidth="2.4"
+        android:strokeColor="#1D1D1D"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

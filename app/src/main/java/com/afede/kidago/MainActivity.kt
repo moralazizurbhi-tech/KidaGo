@@ -15,9 +15,13 @@ import com.afede.kidago.data.ArchiveReason
 import com.afede.kidago.data.SyncState
 import com.afede.kidago.ui.catalog.CatalogStatusStrip
 import com.afede.kidago.ui.components.ConfirmationHost
+import com.afede.kidago.ui.price.PrecioScreen
+import com.afede.kidago.ui.price.PriceLookupViewModel
+import com.afede.kidago.ui.price.PriceState
 import com.afede.kidago.ui.products.ProductosListViewModel
 import com.afede.kidago.ui.products.ProductosScreen
 import com.afede.kidago.ui.scan.EscanearScreen
+import com.afede.kidago.ui.scan.Cue
 import com.afede.kidago.ui.scan.EscanearViewModel
 import com.afede.kidago.ui.settings.AjustesScreen
 import com.afede.kidago.ui.settings.AjustesViewModel
@@ -65,12 +69,29 @@ class MainActivity : ComponentActivity() {
                     }
                 })
                 val captureState by escanear.state.collectAsState()
+                val precio: PriceLookupViewModel = viewModel(factory = viewModelFactory {
+                    initializer {
+                        with(container) {
+                            PriceLookupViewModel(scanner, catalogSync.state, catalogQuery::lookup) {
+                                when (it) {
+                                    is PriceState.Found -> outcomeFeedback.onCue(Cue.Found)
+                                    is PriceState.NotFound -> outcomeFeedback.onCue(Cue.NotFound)
+                                    PriceState.Error -> outcomeFeedback.onCue(Cue.Error)
+                                    else -> Unit
+                                }
+                            }
+                        }
+                    }
+                })
+                val priceState by precio.state.collectAsState()
+                val priceTyped by precio.typed.collectAsState()
                 val typed by escanear.typed.collectAsState()
                 val physicalKeyboard by container.keyboardProbe.present.collectAsState()
                 AppShell(
                     productsBadge = productos?.total ?: 0, // the live total of the list, the same number Productos shows in its header
                     headerContent = { CatalogStatusStrip(sync, onNoFileAccessTap = container.fileAccess::openSettings) },
                     scanScreen = { EscanearScreen(captureState, typed, escanear::onTyped, escanear::onSubmit, escanear::onQuantitySubmit, syncing = sync is SyncState.Syncing, onFinish = escanear::onFinish, onQuantityEdit = escanear::onQuantityEdit, physicalKeyboard = physicalKeyboard, onScreenActive = escanear::setScreenActive) },
+                    priceScreen = { PrecioScreen(priceState, priceTyped, precio::onTyped, precio::onSubmit, precio::onBack, syncing = sync is SyncState.Syncing, physicalKeyboard = physicalKeyboard, onScreenActive = precio::setScreenActive) },
                     productsScreen = { ProductosScreen(productos, products.confirmation, products.removal::onLongPress, removalState = products.removal.state.collectAsState().value) },
                     settingsScreen = {
                         AjustesScreen(ajustesState, ajustes::onSoundToggle, ajustes::onVibrationToggle, ajustes::onFolderSubmit, ajustes.confirmation, ajustes.clear::onClearTapped, physicalKeyboard = physicalKeyboard)

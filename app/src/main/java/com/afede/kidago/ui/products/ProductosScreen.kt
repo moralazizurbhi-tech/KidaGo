@@ -139,10 +139,9 @@ private val RowText = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.No
 @Composable
 private fun EmptyState(modifier: Modifier) {
     Column(modifier.fillMaxWidth().testTag("productos-empty"), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        // The project's mascot outline (same artwork as the Productos tab icon).
-        // 83x83 frame (FEAT-003 UI Definition); the artwork keeps its 83x53 visible rows, centred in it.
+        // The project's mascot outline, the dog face (same artwork as the Productos tab icon).
         Box(Modifier.size(83.dp), contentAlignment = Alignment.Center) {
-            Image(painterResource(R.drawable.ic_tab_products), contentDescription = null, modifier = Modifier.size(width = 83.dp, height = 53.dp))
+            Image(painterResource(R.drawable.ic_tab_products), contentDescription = null, modifier = Modifier.size(72.dp))
         }
         Text("No hay productos escaneados", style = MaterialTheme.typography.titleLarge, color = KidaGoColors.Text, textAlign = TextAlign.Center, modifier = Modifier.padding(top = KidaGoSpacing.Gap))
         Text(

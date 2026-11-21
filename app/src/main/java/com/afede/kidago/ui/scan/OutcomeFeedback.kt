@@ -35,6 +35,11 @@ class OutcomeFeedbackTrigger(
             CaptureState.Error -> Cue.Error
             else -> return
         }
+        onCue(cue)
+    }
+
+    /** The same cues for a result that is not a capture state (Consultar precio, FEAT-006). */
+    fun onCue(cue: Cue) {
         val now = settings()
         if (now.soundEnabled) cues.beep(cue)
         if (now.vibrationEnabled) cues.vibrate(cue)

@@ -55,11 +55,11 @@ class SettingsEffectTest {
         File(second, "product-catalog-2026-10-04.txt").writeText("1111111111111\n")
 
         sync.onDetectionOpportunity() // the default folder is empty
-        assertEquals(false, catalog.contains("1111111111111"))
+        assertEquals(false, (catalog.find("1111111111111") != null))
 
         assertEquals(true, settings.setCatalogFolder(second.path))
         sync.onDetectionOpportunity()
-        assertEquals(true, catalog.contains("1111111111111"))
+        assertEquals(true, (catalog.find("1111111111111") != null))
         assertEquals(emptyList<String>(), second.list()!!.toList()) // imported, then cleaned up from the new folder
     }
 }

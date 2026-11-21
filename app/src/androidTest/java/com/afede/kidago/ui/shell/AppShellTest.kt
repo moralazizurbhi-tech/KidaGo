@@ -40,10 +40,18 @@ class AppShellTest {
     }
 
     @Test
-    fun tabBarIs132DesignPxHighSoItStartsAtY668OfTheFrame() {
-        // Bottom-anchored: in the 800 px frame a 132 px bar starts at y=668 (no navigation inset in a test window).
+    fun tabBarIs138DesignPxHighSoTheActiveBubbleStartsAtY662OfTheFrame() {
+        // Bottom-anchored: the pill bar (96) starts at y=698 and the active bubble rises 36 above it (FEAT-006 UI Definition).
         val bar = rule.onNodeWithTag("tab-bar").getUnclippedBoundsInRoot()
-        assertEquals(132f, bar.height.value, 0.5f)
+        assertEquals(138f, bar.height.value, 0.5f)
+    }
+
+    @Test
+    fun precioTabOpensTheLookupScreen() {
+        tab("Precio").performClick()
+        rule.onNodeWithTag("screen-price").assertIsDisplayed()
+        tab("Escanear").performClick()
+        rule.onNodeWithTag("screen-scan").assertIsDisplayed()
     }
 
     @Test

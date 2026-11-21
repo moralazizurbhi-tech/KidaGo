@@ -12,8 +12,9 @@ class CatalogImporterTest {
     @get:Rule val tmp = TemporaryFolder()
 
     private var committed: List<String>? = null
+    private var items: List<CatalogItem>? = null
     private var commitCalls = 0
-    private val importer = CatalogImporter { committed = it; commitCalls++ }
+    private val importer = CatalogImporter { items = it; committed = it.map(CatalogItem::barcode); commitCalls++ }
 
     private fun file(text: String): File = tmp.newFile().apply { writeText(text) }
 
@@ -85,5 +86,37 @@ class CatalogImporterTest {
     fun failedCommitIsAFailure() = runTest {
         val failing = CatalogImporter { error("disk full") }
         assertTrue(failing.import(file("1234567890123\n")) is ImportResult.Failure)
+    }
+
+    @Test
+    fun pricedLinesCarryTheirPriceInCents() = runTest {
+        val result = importer.import(file("0000772190817;24.99\r\n0000772190818;24,99\r\n0000772190819,3\r\n8412345678901;0.00\r\n8412345678902\r\n"))
+        assertEquals(ImportResult.Success(5), result)
+        assertEquals(listOf(2499L, 2499L, 300L, 0L, null), items!!.map { it.priceCents })
+    }
+
+    @Test
+    fun aMalformedPriceFailsTheWholeImport() = runTest {
+        for (bad in listOf("8412345678901;abc", "8412345678901;", "8412345678901;1.999", "8412345678901;-2", "8412345678901;2 €")) {
+            val result = importer.import(file("1234567890123;1.00\n$bad\n"))
+            assertTrue(bad, result is ImportResult.Failure && result.diagnostics.single().reason.startsWith("precio no válido"))
+        }
+        assertEquals(0, commitCalls)
+    }
+
+    @Test
+    fun aBadCodeIsReportedAsACodeProblemWhateverItsPrice() = runTest {
+        val result = importer.import(file("X0016SA1Z7;19.99\n")) as ImportResult.Failure
+        assertTrue(result.diagnostics.single().reason.contains("código"))
+    }
+
+    @Test
+    fun priceParsingIsExactAndNeverRounds() {
+        assertEquals(181500L, CatalogImporter.priceCents("1815.00"))
+        assertEquals(150L, CatalogImporter.priceCents("1.5"))
+        assertEquals(null, CatalogImporter.priceCents("1.555"))
+        assertEquals(null, CatalogImporter.priceCents(".50"))
+        assertEquals("24,99\u00A0€", formatPrice(2499))
+        assertEquals("0,05\u00A0€", formatPrice(5))
     }
 }

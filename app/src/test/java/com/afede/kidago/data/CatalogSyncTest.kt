@@ -25,7 +25,7 @@ class CatalogSyncTest {
     private var committed = mutableListOf<List<String>>()
     private val finishedAt = Instant.parse("2026-10-03T10:00:00Z")
 
-    private fun coordinator(importer: CatalogImporter = CatalogImporter { committed += it }) = CatalogSyncCoordinator(
+    private fun coordinator(importer: CatalogImporter = CatalogImporter { committed += it.map(CatalogItem::barcode) }) = CatalogSyncCoordinator(
         guard = FileAccessGuard({ access }, { settingsOpened++ }),
         detector = CatalogFileDetector(),
         importer = importer,
@@ -213,12 +213,12 @@ class CatalogSyncTest {
     fun facadeRefusesOnlyWhileSyncingAndNeverConsultsTheStoreThen() = runTest {
         val state = MutableStateFlow<SyncState>(SyncState.Syncing(0.5f))
         var consulted = 0
-        val facade = CatalogQueryFacade(state) { consulted++; it == "1234567890123" }
+        val facade = CatalogQueryFacade(state) { consulted++; if (it == "1234567890123") CatalogItem(it) else null }
         assertEquals(LookupResult.Unavailable, facade.lookup("1234567890123"))
         assertEquals(0, consulted)
         for (s in listOf(SyncState.UpToDate(null), SyncState.NoCatalog, SyncState.Error(emptyList(), 1), SyncState.NoFileAccess)) {
             state.value = s
-            assertEquals(LookupResult.Found, facade.lookup("1234567890123"))
+            assertEquals(LookupResult.Found(), facade.lookup("1234567890123"))
             assertEquals(LookupResult.NotFound, facade.lookup("0000000000000"))
         }
     }
