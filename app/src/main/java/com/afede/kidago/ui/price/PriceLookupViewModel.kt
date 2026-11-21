@@ -23,9 +23,9 @@ sealed interface PriceState {
 }
 
 /**
- * The Precio tab (FEAT-006): looks a code up and shows its price, never adding it (C1). A new capture replaces whatever
- * shows (C3); captures count only while the tab is shown (C4) and never during a sync; leaving the tab, or "Volver",
- * returns it to its base (C3, C5). Manual entry works like Escanear's (C8).
+ * The Precio tab (FEAT-006): looks a code up and shows its price, never adding it (C1). A new capture replaces a shown
+ * price (C3), but Not Found and Error stay until "Volver" (C9); captures count only while the tab is shown (C4) and never
+ * during a sync; leaving the tab, or "Volver", returns it to its base (C3, C5). Manual entry works like Escanear's (C8).
  */
 class PriceLookupViewModel(
     scanner: BarcodeScanner,
@@ -52,7 +52,12 @@ class PriceLookupViewModel(
         if (!active) reset()
     }
 
-    fun onTyped(text: String) = manual.onChange(text)
+    fun onTyped(text: String) {
+        if (!blocked()) manual.onChange(text)
+    }
+
+    /** Not Found and Error take no new capture until "Volver" (C9). */
+    private fun blocked() = _state.value is PriceState.NotFound || _state.value == PriceState.Error
 
     fun onSubmit() { manual.submit() }
 
@@ -66,7 +71,7 @@ class PriceLookupViewModel(
     }
 
     private fun onCapture(capture: ScanResult) {
-        if (!active || syncState.value is SyncState.Syncing) return
+        if (!active || syncState.value is SyncState.Syncing || blocked()) return
         inFlight?.cancel()
         if (capture !is ScanResult.Code) { outcome(PriceState.Error); return }
         _state.value = PriceState.Searching
